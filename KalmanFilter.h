@@ -6,10 +6,13 @@
 #include "functions.h"
 #include <math.h>
 #include <iostream>
-using namespace std;
 
 #include <random>
 #include <cmath>
+
+#include "types.h"
+
+using namespace std;
 
 
 
@@ -19,10 +22,10 @@ class CKalmanFilter
 public:
     CKalmanFilter();
     void CorruptControls(Eigen::VectorXd utrue, Eigen::VectorXd& u);
-    void PredictState(Eigen::VectorXd& x, Eigen::MatrixXd& X, Eigen::VectorXd& u);
-    void UpdateEKF(Eigen::VectorXd& x, Eigen::MatrixXd& X, Eigen::VectorXd& z);
+    void PredictState(Kalman::Input& u);
+    void UpdateEKF(Kalman::ObservationWithTag& z);
     bool MatchObservation(Eigen::VectorXd& obs, Eigen::MatrixXd& Beacons);
-    void AddState(Eigen::VectorXd& x, Eigen::MatrixXd& X, Eigen::VectorXd& z);
+    void AddState(Eigen::VectorXd& z);
     bool isMapped(Eigen::VectorXd& obsRB);
 
     // public member function that allow to set and modify the noise parameters of the Kalman Filter
@@ -69,5 +72,52 @@ protected:
     double m_var_bearing;		// Variance of the additive bearing noise in (rad)^2
 
     vector<int> m_mappedLandmarkList;
+
+private:
+
+    // Initialise with only vehicle state. Features will be added online
+    Kalman::State  _x = Kalman::State::Zero(SlamArraySize::VEHICLE_STATE_DIM);
+    Kalman::StateCovariance  _X = Kalman::StateCovariance ::Zero(SlamArraySize::VEHICLE_STATE_DIM,SlamArraySize::VEHICLE_STATE_DIM);
+
+    // Input error covariance (e.g: 3x3 if 3 inputs) - used in PredictState()
+    Kalman::InputCovariance _sigma_u = Kalman::InputCovariance::Zero();
+
+    // Input error covariance transfer matrix (e.g: 4x3 if 4 states and 3 inputs) - used in PredictState()
+    Kalman::InputCovarianceTransfer _G = Kalman::InputCovarianceTransfer::Zero();
+
+    // State transition matrix (4x4 if 4 states) - used in PredictState()
+    Kalman::VehicleStateCovariance _F = Kalman::VehicleStateCovariance::Zero();
+
+    // Transfer vehicle state covariance into observation covariance (e.g: 2 x 4 if 2D observation & 4 vehicle states)
+    Kalman::VehicleToObservationTransition _Hv = Kalman::VehicleToObservationTransition::Zero();
+
+    // Transfer landmark state covariance into observation covariance (e.g: 2 x 2 if 2D observation)
+    Kalman::LandmarkStateToObservationTransition _Hp = Kalman::LandmarkStateToObservationTransition::Zero();
+
+    // 2x1 vector of zeros (predicted measurement)
+    Kalman::Observation _zpred =  Kalman::Observation::Zero();
+
+    // 2x1 vector of zeros (measurement residual)
+    Kalman::Observation _v =  Kalman::Observation::Zero();
+
+    // 2x2 matrix of zeros (measurement covariance)
+    Kalman::ObservationCovariance _sigma_z = Kalman::ObservationCovariance::Zero();
+
+    // 2x2 matrix of zeros (innovation covariance)
+    Kalman::ObservationCovariance _S = Kalman::ObservationCovariance::Zero();
+
+    // Initialize Tx as 2x4  - used in AddState()
+    Kalman::ObservationCovariance _Tx = Kalman::ObservationCovariance::Zero();
+
+    // Initialize Tz as 2x2  - used in AddState()
+    Kalman::ObservationCovariance _Tz = Kalman::ObservationCovariance::Zero();
+
+    // Initialize R (Noise covariance matrix) as 2x2 - used in AddState()
+    Kalman::ObservationCovariance _R = Kalman::ObservationCovariance::Zero();
+
+    // Initialize obsWRF (Observation matrix) as 2x1 - used in AddState()
+    Kalman::Observation _obsWRF = Kalman::Observation::Zero();
+
+    double _dt = 0.0;
 
 };

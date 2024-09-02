@@ -60,19 +60,6 @@ CVehicleModel::CVehicleModel( const char* refpathFile, const char* beaconFile, i
 
 bool CVehicleModel::SimObs( const int k, CDynamicArray& ObsWRF, CDynamicArray& ObsRB, int sigma_range, int sigma_bearing )
 {
-    int i;										// counter
-    int bIndex;									// Index of the observed beacon
-    double r;									// distance radar - beacon
-    double d1, d2;								// find out
-    double dx, dy;								// deltas in WRF of the beacon location by respect of the radar's position
-    double phi;
-    double c_phi1, c_phi2, s_phi1, s_phi2;		// Precomputed variables: cos and sin of the vehicle orientation
-    double radx1, rady1, radx2, rady2;			// Location in WRF of the radar, at start (1) and end (2) step
-    double radphi1, radphi2;					// Orientation in WRF of the radar aiming angle, at start and end step, normalized between ]-pi,pi]
-    double dx1, dy1, dx2, dy2;					// deltas in X and Y direction of the end of the radar's aiming line, by respect of it's start and expressed in WRF
-    double bRange;								// Range of an observed beacon
-
-
     // Just check if the index is valid ( m_xtrue[k+1] is found in the code, so go to max. k = #element-2 )
     if( ( k < 0 ) || ( k > m_xtrue.GetNumRows() - 2 ) )
     {
@@ -84,42 +71,42 @@ bool CVehicleModel::SimObs( const int k, CDynamicArray& ObsWRF, CDynamicArray& O
     // If the beacon lies between these two lines, then it will be observed
 
     // Cos an Sin of the vehicle's orientation at start and end location
-    c_phi1 = cos( m_xtrue[k][2] );
-    c_phi2 = cos( m_xtrue[k+1][2] );
-    s_phi1 = sin( m_xtrue[k][2] );
-    s_phi2 = sin( m_xtrue[k+1][2] );
+    double c_phi1 = cos( m_xtrue[k][2] );
+    double c_phi2 = cos( m_xtrue[k+1][2] );
+    double s_phi1 = sin( m_xtrue[k][2] );
+    double s_phi2 = sin( m_xtrue[k+1][2] );
 
     // Find location of the radar at start location, X and Y coordinate in WRF
-    radx1 = m_xtrue[k][0] + ( XOFFSET*c_phi1 - YOFFSET*s_phi1 );
-    rady1 = m_xtrue[k][1] + ( XOFFSET*s_phi1 + YOFFSET*c_phi1 );
+    double radx1 = m_xtrue[k][0] + (SlamPhysicalConstants::XOFFSET*c_phi1 - SlamPhysicalConstants::YOFFSET*s_phi1 );
+    double rady1 = m_xtrue[k][1] + (SlamPhysicalConstants::XOFFSET*s_phi1 + SlamPhysicalConstants::YOFFSET*c_phi1 );
 
     // Find location and aim of radar at end location, X and Y coordinate in WRF
-    radx2 = m_xtrue[k+1][0] + ( XOFFSET*c_phi2 - YOFFSET*s_phi2 );
-    rady2 = m_xtrue[k+1][1] + ( XOFFSET*s_phi2 + YOFFSET*c_phi2 );
+    double radx2 = m_xtrue[k+1][0] + (SlamPhysicalConstants::XOFFSET*c_phi2 - SlamPhysicalConstants::YOFFSET*s_phi2 );
+    double rady2 = m_xtrue[k+1][1] + (SlamPhysicalConstants::XOFFSET*s_phi2 + SlamPhysicalConstants::YOFFSET*c_phi2 );
 
     // gets normalized angle for the radar aim at the end and start location
-    radphi1 = a_sub( m_xtrue[k][3]*R_RATE, 0 );
-    radphi2 = a_sub( m_xtrue[k+1][3]*R_RATE, 0 );
+    double radphi1 = a_sub( m_xtrue[k][3]*SlamPhysicalConstants::R_RATE, 0 );
+    double radphi2 = a_sub( m_xtrue[k+1][3]*SlamPhysicalConstants::R_RATE, 0 );
 
     // construct radar aiming line segments for checking beacon view
-    dx1 = R_MAX_RANGE*cos( radphi1 + m_xtrue[k][2] );
-    dy1 = R_MAX_RANGE*sin( radphi1 + m_xtrue[k][2] );
-    dx2 = R_MAX_RANGE*cos( radphi2 + m_xtrue[k+1][2] );
-    dy2 = R_MAX_RANGE*sin( radphi2 + m_xtrue[k+1][2] );
+    double dx1 = SlamPhysicalConstants::R_MAX_RANGE*cos( radphi1 + m_xtrue[k][2] );
+    double dy1 = SlamPhysicalConstants::R_MAX_RANGE*sin( radphi1 + m_xtrue[k][2] );
+    double dx2 = SlamPhysicalConstants::R_MAX_RANGE*cos( radphi2 + m_xtrue[k+1][2] );
+    double dy2 = SlamPhysicalConstants::R_MAX_RANGE*sin( radphi2 + m_xtrue[k+1][2] );
 
     // To be observed, the beacon must lie between these two lines the test is simply that the dot
     // products are positive and negative respectively. The nearest beacon within max range is recorded.
 
-    bRange	= R_MAX_RANGE;			// Initialization to the largest possible range
-    bIndex	= 0;					// If it remains null, no beacon observed
-    for( i = 0; i < m_Beacons.GetNumRows(); i++ )
+    double bRange	= SlamPhysicalConstants::R_MAX_RANGE;			// Initialization to the largest possible range
+    double bIndex	= 0;					// If it remains null, no beacon observed
+    for(int i = 0; i < m_Beacons.GetNumRows(); i++ )
     {
-        dx = m_Beacons[i][0] - radx1;
-        dy = m_Beacons[i][1] - rady1;
-        r = sqrt( dx*dx + dy*dy );
-        d1 = ( (m_Beacons[i][1] - rady1)*dx1 ) - ( (m_Beacons[i][0] - radx1)*dy1 );
-        d2 = ( (m_Beacons[i][1] - rady2)*dx2 ) - ( (m_Beacons[i][0] - radx2)*dy2 );
-        if( ( r < R_MAX_RANGE ) && ( d1 > 0 ) && ( d2 < 0 ) && ( r < bRange ) )
+        double dx = m_Beacons[i][0] - radx1;
+        double dy = m_Beacons[i][1] - rady1;
+        double r = sqrt( dx*dx + dy*dy );
+        double d1 = ( (m_Beacons[i][1] - rady1)*dx1 ) - ( (m_Beacons[i][0] - radx1)*dy1 );
+        double d2 = ( (m_Beacons[i][1] - rady2)*dx2 ) - ( (m_Beacons[i][0] - radx2)*dy2 );
+        if( ( r < SlamPhysicalConstants::R_MAX_RANGE ) && ( d1 > 0 ) && ( d2 < 0 ) && ( r < bRange ) )
         {
             bRange = r;
             bIndex = i;
@@ -129,7 +116,7 @@ bool CVehicleModel::SimObs( const int k, CDynamicArray& ObsWRF, CDynamicArray& O
     // if a beacon is found, assume it was seen from xtrue_start:
     if( bIndex )
     {
-        phi = a_sub( m_xtrue[k][2], 0);
+        double phi = a_sub( m_xtrue[k][2], 0);
         ObsRB[0] = bRange;
         ObsRB[1] = a_sub( atan2( m_Beacons[bIndex][1] - rady1 , m_Beacons[bIndex][0] - radx1 ), phi );
         ObsRB[2] = bIndex; 				// beacon index
@@ -181,8 +168,8 @@ void CVehicleModel::GetError( const int k, double& PositionError, double& Orient
 
     // matching index starts with 0 and since it's declared as static,
     // it correspond to the previously matched point.
-    startIndex = matchingIndex - PATHWINDOW;
-    endIndex   = matchingIndex + PATHWINDOW;
+    startIndex = matchingIndex - SlamConstants::PATHWINDOW;
+    endIndex   = matchingIndex + SlamConstants::PATHWINDOW;
 
     // If the end index is bigger that the number of point in the reference
     // path array, divide this index by the number of element. The rest gives
@@ -221,7 +208,7 @@ void CVehicleModel::GetError( const int k, double& PositionError, double& Orient
         startIndex = swapIndex;
     }
 
-    dmin = WORLD_SIZE;
+    dmin = SlamPhysicalConstants::WORLD_SIZE;
 
     // Find the point of the path that is refered to the actual position
     for( i = startIndex; i < endIndex; i++)
@@ -262,20 +249,20 @@ void CVehicleModel::GetControl( const int k, double perr, double oerr )
     // of the current CVehicleModel object. More efficient if declared as static ????
     // since this function is called for every element of the CDoubleVector::m_Data, which
     // is typically around 10'000 times
-    CDynamicArray utrue_next( UTRUE_DIM );
-    CDynamicArray xtrue_next( XTRUE_DIM );
+    CDynamicArray utrue_next( SlamArraySize::VEHICLE_CONTROLS_DIM );
+    CDynamicArray xtrue_next( SlamArraySize::VEHICLE_PATH_DIM );
 
     // The control vector utrue = [v, steer, time]'
     utrue_next[0] = m_utrue[k][0];
-    utrue_next[1] = a_add( KP*perr, KO*oerr);
-    utrue_next[2] = m_utrue[k][2] + DT;
+    utrue_next[1] = a_add( SlamConstants::KP*perr, SlamConstants::KO*oerr);
+    utrue_next[2] = m_utrue[k][2] + SlamConstants::DT;
 
 
     // The true state vector of the vehicle xtrue = [x,y,theta,dt] dt or R ???!!! check it here !!!!???
-    xtrue_next[0] = m_xtrue[k][0] + DT*utrue_next[0]*cos( m_xtrue[k][2] + utrue_next[1] );
-    xtrue_next[1] = m_xtrue[k][1] + DT*utrue_next[0]*sin( m_xtrue[k][2] + utrue_next[1] );
-    xtrue_next[2] = m_xtrue[k][2] + DT*utrue_next[0]*sin( utrue_next[1] ) / WHEEL_BASE;
-    xtrue_next[3] = m_xtrue[k][3] + DT;
+    xtrue_next[0] = m_xtrue[k][0] + SlamConstants::DT*utrue_next[0]*cos( m_xtrue[k][2] + utrue_next[1] );
+    xtrue_next[1] = m_xtrue[k][1] + SlamConstants::DT*utrue_next[0]*sin( m_xtrue[k][2] + utrue_next[1] );
+    xtrue_next[2] = m_xtrue[k][2] + SlamConstants::DT*utrue_next[0]*sin( utrue_next[1] ) / SlamPhysicalConstants::WHEEL_BASE;
+    xtrue_next[3] = m_xtrue[k][3] + SlamConstants::DT;
 
     // Add the new controls and state vector to the corresponding CDoubleArray member data
     m_utrue.AddToTail( utrue_next );
@@ -289,19 +276,19 @@ void CVehicleModel::CalcSingleStepVehicleState( const int k, double perr, double
     // of the current CVehicleModel object. More efficient if declared as static ????
     // since this function is called for every element of the CDoubleVector::m_Data, which
     // is typically around 10'000 times
-    CDynamicArray xtrue_next( XTRUE_DIM );
+    CDynamicArray xtrue_next( SlamArraySize::VEHICLE_PATH_DIM );
 
     // The control vector utrue = [v, steer, time]'
     utrue_next[0] = m_utrue[k][0];
-    utrue_next[1] = a_add( KP*perr, KO*oerr);
-    utrue_next[2] = m_utrue[k][2] + DT;
+    utrue_next[1] = a_add( SlamConstants::KP*perr, SlamConstants::KO*oerr);
+    utrue_next[2] = m_utrue[k][2] + SlamConstants::DT;
 
 
     // The true state vector of the vehicle xtrue = [x,y,theta,dt] dt or R ???!!! check it here !!!!???
-    xtrue_next[0] = m_xtrue[k][0] + DT*utrue_next[0]*cos( m_xtrue[k][2] + utrue_next[1] );
-    xtrue_next[1] = m_xtrue[k][1] + DT*utrue_next[0]*sin( m_xtrue[k][2] + utrue_next[1] );
-    xtrue_next[2] = m_xtrue[k][2] + DT*utrue_next[0]*sin( utrue_next[1] ) / WHEEL_BASE;
-    xtrue_next[3] = m_xtrue[k][3] + DT;
+    xtrue_next[0] = m_xtrue[k][0] + SlamConstants::DT*utrue_next[0]*cos( m_xtrue[k][2] + utrue_next[1] );
+    xtrue_next[1] = m_xtrue[k][1] + SlamConstants::DT*utrue_next[0]*sin( m_xtrue[k][2] + utrue_next[1] );
+    xtrue_next[2] = m_xtrue[k][2] + SlamConstants::DT*utrue_next[0]*sin( utrue_next[1] ) / SlamPhysicalConstants::WHEEL_BASE;
+    xtrue_next[3] = m_xtrue[k][3] + SlamConstants::DT;
 
     // Add the new controls and state vector to the corresponding CDoubleArray member data
     m_utrue.AddToTail( utrue_next );
@@ -326,12 +313,12 @@ void CVehicleModel::ComputeControls()
 
     // Initialize the number of columns (or # of variables) of the
     // m_xtrue and m_utrue CDoubleVector object
-    m_xtrue.SetnCols( XTRUE_DIM );
-    m_utrue.SetnCols( UTRUE_DIM );
+    m_xtrue.SetnCols( SlamArraySize::VEHICLE_PATH_DIM );
+    m_utrue.SetnCols( SlamArraySize::VEHICLE_CONTROLS_DIM );
 
     // For the initial condition
-    CDynamicArray utrue_init( UTRUE_DIM );
-    CDynamicArray xtrue_init( XTRUE_DIM );
+    CDynamicArray utrue_init( SlamArraySize::VEHICLE_CONTROLS_DIM );
+    CDynamicArray xtrue_init( SlamArraySize::VEHICLE_PATH_DIM );
 
     // Initialisation with the initial position of the vehicle taken from
     // the reference path xtrue_init = [ X, Y, Theta, Time ]
@@ -341,7 +328,7 @@ void CVehicleModel::ComputeControls()
     xtrue_init[3] = 0;
 
     // Initialization of the control vector utrue_init = [ Velocity, steering angle, Time]
-    utrue_init[0] = VVEL;
+    utrue_init[0] = SlamConstants::VVEL;
     utrue_init[1] = 0;
     utrue_init[2] = 0;
 
@@ -378,7 +365,7 @@ void CVehicleModel::ComputeControls()
         new_d = sqrt( dx*dx + dy*dy );
 
         // Getting really close to the start
-        if( new_d < DISTANCE_GAP_FOR_CLOSING_LOOP )
+        if( new_d < SlamConstants::DISTANCE_GAP_FOR_CLOSING_LOOP )
         {
             // There is actually a range of points where new_d is less than
             // 0.2 when the vehicle is close to the startand the following
@@ -398,7 +385,7 @@ void CVehicleModel::ComputeControls()
 
     // Convert the vehicle speed in rad/s
     for( k = 0; k < m_utrue.GetNumRows(); k++ )
-        m_utrue[k][0] = m_utrue[k][0]/WHEEL_RADIUS;
+        m_utrue[k][0] = m_utrue[k][0]/SlamPhysicalConstants::WHEEL_RADIUS;
 
     m_utrue.SaveToFile("utrue_large_5Loops_cpp.txt");
     m_xtrue.SaveToFile("xtrue_large_5Loops_cpp.txt");

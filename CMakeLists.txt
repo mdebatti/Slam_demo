@@ -59,6 +59,7 @@ add_executable(SLAM_executable
     CDynamicArray.cpp
     CDoubleVector.h
     CDoubleVector.cpp
+    types.h
 )
 
 # Add any necessary libraries

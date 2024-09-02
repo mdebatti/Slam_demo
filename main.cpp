@@ -29,34 +29,23 @@ int main(void)
     int num_loops = 5;
     CVehicleModel VModel(file_refpath, file_beacons, num_loops);
 
-    // State and covariance matrix that are going to expand upon new observations
-    // The first 4 states are the vehicle's one: X, Y, Theta, wheelradius
-    Eigen::VectorXd x = Eigen::VectorXd::Zero(X_VEHICLE_DIM);  // 4x1 vector of zeros
-    Eigen::MatrixXd X = Eigen::Matrix<double, X_VEHICLE_DIM, X_VEHICLE_DIM>::Zero();  // 4x4 zero matrix
-
-    // store the state and its covariance in a list
-    vector<Eigen::VectorXd> x_list;
-    vector<Eigen::Matrix<double, XTRUE_DIM, XTRUE_DIM> > X_list;
-
     // The corrupted control vector
     Eigen::VectorXd u = Eigen::VectorXd::Zero(U_CONTROLS_DIM);  // 4x1 vector of zeros
 
-    //CList<DoubleVec, DoubleVec&> x_list;
-    //CList<DoubleSymMatrix, DoubleSymMatrix&> X_list;
     int k;
 
     // Initialise the state vector x
     x(0) = VModel.GetXtrue(0)(0);
     x(1) = VModel.GetXtrue(0)(1);
     x(2) = VModel.GetXtrue(0)(2);
-    x(3) = WHEEL_RADIUS;
+    x(3) = SlamPhysicalConstants::WHEEL_RADIUS;
 
 
     // Initialise the state covariance matrix X
-    X(0,0) = VAR_XX;
-    X(1,1) = VAR_YY;
-    X(2,2) = VAR_TT;
-    X(3,3) = VAR_RR;
+    X(0,0) = SlamNoise::VAR_XX;
+    X(1,1) = SlamNoise::VAR_YY;
+    X(2,2) = SlamNoise::VAR_TT;
+    X(3,3) = SlamNoise::VAR_RR;
 
 #ifndef HELLO
     k = 0;
@@ -70,7 +59,7 @@ int main(void)
         // Prediction Step: the last estimate in fed into the
         // prediction model along with the controls that bring
         // the vehicle to the new position after displacement
-        aEKF.PredictState(x, X, u);
+        aEKF.PredictState(u);
 //		x_pred[0] = x(0);
 //		x_pred[1] = x(1);
 //		x_pred[2] = x(2);
@@ -97,9 +86,9 @@ int main(void)
             // a manhalobis criterion or a joint compatibility test but here, we just set up
             // a list with the tags of the mapped beacons, which enables to tell if mapped or not
             if( aEKF.isMapped(range_bearing ) )
-                aEKF.UpdateEKF(x, X, range_bearing );
+                aEKF.UpdateEKF(range_bearing );
             else
-                aEKF.AddState(x, X, range_bearing );
+                aEKF.AddState(range_bearing );
         }
 
         // store all the state x and its covariance matrix in a list object
