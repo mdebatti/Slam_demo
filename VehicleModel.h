@@ -16,11 +16,11 @@ using namespace std;
 //void SaveToFile( CContainerVector& data );
 // void ReadFromFile( CContainerVector& data );
 
-class CVehicleModel
+class VehicleModel
 {
 public:
-    CVehicleModel( const char* xtrueFile, const char* utrueFile, const char* refpathFile, const char* beaconFile, int numLoops = 1);
-    CVehicleModel( const char* refpathFile, const char* beaconFile,  int numLoops = 1 );
+    VehicleModel( const char* xtrueFile, const char* utrueFile, const char* refpathFile, const char* beaconFile, int numLoops = 1);
+    VehicleModel( const char* refpathFile, const char* beaconFile,  int numLoops = 1 );
 
     bool SimObs( const int k, CDynamicArray& ObsWRF, CDynamicArray& obsRB,  int sigma_range = 0, int sigma_bearing = 0);
     void ComputeControls();

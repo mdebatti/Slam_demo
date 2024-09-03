@@ -43,5 +43,5 @@ namespace SlamConstants{
     constexpr double RAD2DEG    = 360/(2*PI);
     constexpr int PLOT_INNO     = 0;
     constexpr double PATHWINDOW = 20;
-    constexpr double DISTANCE_GAP_FOR_CLOSING_LOOP = 0.2;	// In CVehicleModel::ComputeControl()
+    constexpr double DISTANCE_GAP_FOR_CLOSING_LOOP = 0.2;	// In VehicleModel::ComputeControl()
 }

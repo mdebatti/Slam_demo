@@ -53,12 +53,14 @@ add_executable(SLAM_executable
     constants.h
     functions.h
     functions.cpp
-    CMatlabFileReading.h
-    CMatlabFileReading.cpp
-    CDynamicArray.h
-    CDynamicArray.cpp
-    CDoubleVector.h
-    CDoubleVector.cpp
+    MatlabFileReading.h
+    MatlabFileReading.cpp
+    DynamicArray.h
+    DynamicArray.cpp
+    DoubleVector.h
+    DoubleVector.cpp
+    SimulationSetup.h
+    SimulationSetup.cpp
     types.h
 )
 

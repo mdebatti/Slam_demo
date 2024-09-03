@@ -16,7 +16,7 @@ int main(void)
 {
     try{
 
-    CKalmanFilter aEKF;
+    KalmanFilter aEKF;
 
     // why are RB_OBS_DIM and WRF_OBS_DIM equal to 4?
     CDynamicArray obsRB(RB_OBS_DIM);		// The observation in range and bearing coordinate
@@ -27,7 +27,7 @@ int main(void)
     const char* file_refpath = "../cpp/RefPath_large_5Loops.txt";
     const char* file_beacons = "../cpp/Beacons_small_5Loops.txt";
     int num_loops = 5;
-    CVehicleModel VModel(file_refpath, file_beacons, num_loops);
+    VehicleModel VModel(file_refpath, file_beacons, num_loops);
 
     // The corrupted control vector
     Eigen::VectorXd u = Eigen::VectorXd::Zero(U_CONTROLS_DIM);  // 4x1 vector of zeros

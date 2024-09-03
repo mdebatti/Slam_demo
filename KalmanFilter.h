@@ -14,13 +14,10 @@
 
 using namespace std;
 
-
-
-
-class CKalmanFilter
+class KalmanFilter
 {
 public:
-    CKalmanFilter();
+    KalmanFilter();
     void CorruptControls(Eigen::VectorXd utrue, Eigen::VectorXd& u);
     void PredictState(Kalman::Input& u);
     void UpdateEKF(Kalman::ObservationWithTag& z);
@@ -118,6 +115,7 @@ private:
     // Initialize obsWRF (Observation matrix) as 2x1 - used in AddState()
     Kalman::Observation _obsWRF = Kalman::Observation::Zero();
 
+    // Needs to be set at 0 for initialisation, changed after first step
     double _dt = 0.0;
 
 };

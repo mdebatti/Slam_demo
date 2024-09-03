@@ -6,7 +6,7 @@
 #include "KalmanFilter.h"
 
 
-CKalmanFilter::CKalmanFilter()
+KalmanFilter::KalmanFilter()
 {
 //	m_vStDevBeaconLoc =
     m_vStDevVehicleLocXY = 0;
@@ -31,7 +31,7 @@ CKalmanFilter::CKalmanFilter()
 
 
 // Function to generate a one-step vehicle prediction from previous estimate and control input.
-void CKalmanFilter::PredictState(Kalman::Input& u)
+void KalmanFilter::PredictState(Kalman::Input& u)
 {
     // x(k+1|k) is based on the process model and knowledge of the control input u(k)
     // For the first step, there is no uncertainty
@@ -91,7 +91,7 @@ void CKalmanFilter::PredictState(Kalman::Input& u)
     _dt = SlamConstants::DT;
 }
 
-void CKalmanFilter::UpdateEKF(Kalman::ObservationWithTag& obsRB)
+void KalmanFilter::UpdateEKF(Kalman::ObservationWithTag& obsRB)
 {
     // Subscripts for accessing observed landmark state and Covariance.
     // landmark tags (in obsRB(2)) start at 0 for first landmark
@@ -167,7 +167,7 @@ void CKalmanFilter::UpdateEKF(Kalman::ObservationWithTag& obsRB)
     }
 }
 
-void CKalmanFilter::CorruptControls(Eigen::VectorXd utrue, Eigen::VectorXd& u)
+void KalmanFilter::CorruptControls(Eigen::VectorXd utrue, Eigen::VectorXd& u)
 {
     // NOTE: the Matlab cpp math library is used herein, the indexing syntax for mwArray object
     // is the same as in Matlab (i.e: starts from 1 and not 0)
@@ -197,7 +197,7 @@ void CKalmanFilter::CorruptControls(Eigen::VectorXd utrue, Eigen::VectorXd& u)
 //	::cout << u << endl;
 }
 
-void CKalmanFilter::AddState(Eigen::VectorXd& z)
+void KalmanFilter::AddState(Eigen::VectorXd& z)
 {
     double phi = _x(2) + z(1);
     double dxo = z(0)*cos( phi );
@@ -253,7 +253,7 @@ void CKalmanFilter::AddState(Eigen::VectorXd& z)
     m_mappedLandmarkList.push_back( z[2]);
 }
 
-bool CKalmanFilter::isMapped(Eigen::VectorXd& obsRB)
+bool KalmanFilter::isMapped(Eigen::VectorXd& obsRB)
 {
     int numMapped = m_mappedLandmarkList.size();
     bool result = false;

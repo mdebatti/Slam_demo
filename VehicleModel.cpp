@@ -1,14 +1,9 @@
 #include "VehicleModel.h"
 
-//#define TEST_VM
-//#define TEST_SIMOBS
 
-// it functions perfectly - tested on 12/08/02. Exact match with matlab counterpart
-
-
-// First Constructor that loads and allocate all the member variable of the class CVehicleModel thanks
+// First Constructor that loads and allocate all the member variable of the class VehicleModel thanks
 // to the file. It is always assumed that one variable is one column of the file
-CVehicleModel::CVehicleModel( const char* xtrueFile, const char* utrueFile, const char* refpathFile, const char* beaconFile, int numLoops )
+VehicleModel::VehicleModel( const char* xtrueFile, const char* utrueFile, const char* refpathFile, const char* beaconFile, int numLoops )
 {
     // Load the true vehicle location, the corresponding controls, the reference file
     // and the beacons in the corresponding member data. The allocation for these arrays
@@ -22,9 +17,9 @@ CVehicleModel::CVehicleModel( const char* xtrueFile, const char* utrueFile, cons
     m_NumLoops = numLoops;
 }
 
-// Second Constructor that loads and allocate all the member variable of the class CVehicleModel thanks
+// Second Constructor that loads and allocate all the member variable of the class VehicleModel thanks
 // to the file. It is always assumed that one variable is one column of the file
-CVehicleModel::CVehicleModel( const char* refpathFile, const char* beaconFile, int numLoops)
+VehicleModel::VehicleModel( const char* refpathFile, const char* beaconFile, int numLoops)
 {
 
     // Load the true vehicle location, the corresponding controls, the reference file
@@ -58,12 +53,12 @@ CVehicleModel::CVehicleModel( const char* refpathFile, const char* beaconFile, i
 // the function returns either true or false if it observed something or not
 
 
-bool CVehicleModel::SimObs( const int k, CDynamicArray& ObsWRF, CDynamicArray& ObsRB, int sigma_range, int sigma_bearing )
+bool VehicleModel::SimObs( const int k, CDynamicArray& ObsWRF, CDynamicArray& ObsRB, int sigma_range, int sigma_bearing )
 {
     // Just check if the index is valid ( m_xtrue[k+1] is found in the code, so go to max. k = #element-2 )
     if( ( k < 0 ) || ( k > m_xtrue.GetNumRows() - 2 ) )
     {
-        cerr << "In CVehicleModel::SimObs(), index is out of range (" << k << "/" << m_xtrue.GetNumRows() - 2 << ")" << endl;
+        cerr << "In VehicleModel::SimObs(), index is out of range (" << k << "/" << m_xtrue.GetNumRows() - 2 << ")" << endl;
         exit(1);
     }
 
@@ -153,7 +148,7 @@ bool CVehicleModel::SimObs( const int k, CDynamicArray& ObsWRF, CDynamicArray& O
 
 
 
-void CVehicleModel::GetError( const int k, double& PositionError, double& OrientationError )
+void VehicleModel::GetError( const int k, double& PositionError, double& OrientationError )
 {
     // A point from the reference path is picked out as being the reference
     // point if it is the closed to the current position at time k. The search
@@ -242,11 +237,11 @@ void CVehicleModel::GetError( const int k, double& PositionError, double& Orient
 
 }
 
-void CVehicleModel::GetControl( const int k, double perr, double oerr )
+void VehicleModel::GetControl( const int k, double perr, double oerr )
 {
     // Declaration of two CDynamicArray object to hold the controls and
     // state vector that has to be added to the CDoubleVector member variable
-    // of the current CVehicleModel object. More efficient if declared as static ????
+    // of the current VehicleModel object. More efficient if declared as static ????
     // since this function is called for every element of the CDoubleVector::m_Data, which
     // is typically around 10'000 times
     CDynamicArray utrue_next( SlamArraySize::VEHICLE_CONTROLS_DIM );
@@ -269,11 +264,11 @@ void CVehicleModel::GetControl( const int k, double perr, double oerr )
     m_xtrue.AddToTail( xtrue_next );
 }
 
-void CVehicleModel::CalcSingleStepVehicleState( const int k, double perr, double oerr )
+void VehicleModel::CalcSingleStepVehicleState( const int k, double perr, double oerr )
 {
     // Declaration of two CDynamicArray object to hold the controls and
     // state vector that has to be added to the CDoubleVector member variable
-    // of the current CVehicleModel object. More efficient if declared as static ????
+    // of the current VehicleModel object. More efficient if declared as static ????
     // since this function is called for every element of the CDoubleVector::m_Data, which
     // is typically around 10'000 times
     CDynamicArray xtrue_next( SlamArraySize::VEHICLE_PATH_DIM );
@@ -295,7 +290,7 @@ void CVehicleModel::CalcSingleStepVehicleState( const int k, double perr, double
     m_xtrue.AddToTail( xtrue_next );
 }
 
-void CVehicleModel::ComputeControls()
+void VehicleModel::ComputeControls()
 {
 
     // position and orientation error of the vehicle by respect
@@ -394,7 +389,7 @@ void CVehicleModel::ComputeControls()
 #ifdef TEST_VM
 void main()
 {
-    // Test the CVehicleModel::SimObs() member function. Loads all the needed values from text files
+    // Test the VehicleModel::SimObs() member function. Loads all the needed values from text files
     // generated with matlab. The result is saved to text file so that it can be compared to the values
     // generated by the reference matlab code
 #ifdef TEST_SIMOBS
@@ -408,7 +403,7 @@ void main()
     CDoubleVector ObsWRF_vect( WRF_OBS_DIM );	// idem
 
     // Load the values from the files in the variables
-    CVehicleModel VM( "RefPath_large_5Loops.txt", "Beacons_large_5Loops.txt",5);
+    VehicleModel VM( "RefPath_large_5Loops.txt", "Beacons_large_5Loops.txt",5);
 
     for( k = 0; k < VM.GetXtrueArrayDim()-1; k++ )
     {
