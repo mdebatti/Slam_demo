@@ -1,38 +1,47 @@
 #pragma once
 
-namespace SlamPhysicalConstants{
+// File paths for inputs to the simulation: target path (X,Y) and beacon location (X, Y)
+constexpr const char* FILE_REFPATH = "../cpp/inputs/RefPath_small_5Loops.txt";
+constexpr const char* FILE_BEACONS = "../cpp/inputs/Beacons_small_5Loops.txt";
+
+namespace SLAM_PHYSICAL_CONST{
     constexpr double WHEEL_BASE     = 1.0;		// vehicle wheel base (m)
     constexpr double WHEEL_RADIUS   = 0.3;      // nomial wheel radius (m)
-    constexpr double R_RATE         = 12.566;   // rotation rate (rads/s)
-    constexpr double R_MAX_RANGE    = 100;      // Maximum range of the radar
+    constexpr double R_RATE         = 12.566;   // rotation angular velocity  of radar (rads/s)
+    constexpr double R_MAX_RANGE    = 1000;      // Maximum range of the radar
 
-    constexpr int XOFFSET           = 0;
-    constexpr int YOFFSET           = 0;
+    constexpr int XOFFSET           = 0;        // see kinematic model of vehicle
+    constexpr int YOFFSET           = 0;        // see kinematic model of vehicle
     constexpr int WORLD_SIZE        = 500;      // 0-100 meters in each direction
 }
 
-namespace SlamArraySize {
+namespace SLAM_ARRAY_SIZE {
     constexpr int VEHICLE_STATE_DIM     = 4;   // The 4 states modelling the vehicle (X, Y, Orientation, Wheel radius)
-    constexpr int INPUT_DIM             = 3;   // The 3 inputs: (Wheel angular velocity, Wheel orientation, Wheel radius noise) - wheel radius noise is to model deformation
-    constexpr int OBSERVATION_DIM       = 2;   // (X, Y) of each beacons in the world reference frame
-
-    constexpr int VEHICLE_PATH_DIM      = 4;   // (X, Y, Orientation, Time) for a single point of the vehicle path loaded from file
-    constexpr int VEHICLE_CONTROLS_DIM  = 3;   // (Wheel angular velocity, steering angle, Time) for a single point of the vehicle controls saved to file
+    constexpr int INPUT_DIM             = 2;   // The 3 inputs: (Wheel angular velocity, Wheel orientation)
+    constexpr int OBSERVATION_DIM       = 2;   // (X, Y) of each beacons in the world reference frame, or (range, bearing) in vehicle RF
+    constexpr int OBSERVATION_SIM_DIM   = 3;   // (X,Y) or (range, bearing) + the beacon ID that was observed (this is for simulated observations)
+    constexpr int VEHICLE_PATH_DIM      = 2;   // (X, Y) for a single point of the vehicle path loaded from file
 }
 
-namespace SlamNoise {
-    constexpr double VAR_XX = 0.024;
-    constexpr double VAR_YY = 0.024;
-    constexpr double VAR_TT = 0.0003;
-    constexpr double VAR_RR = 0.0001;
+namespace SLAM_NOISE {
+    constexpr double VAR_XX = 0.024;        // variance of vehicle x location (m^2). Only used at initialisation and not as process noise!
+    constexpr double VAR_YY = 0.024;        // variance of vehicle y location (m^2). Only used at initialisation and not as process noise!
+    constexpr double VAR_TT = 0.0003;       // variance of vehicle orientation (rad^2). Only used at initialisation and not as process noise!
+    constexpr double VAR_RR = 0.0001;       // variance of wheel radius noise (m^2). Only used at initialisation and not as process noise!
 
-    constexpr double SIGMA_Q = 0.25;		// Multiplicative Slip Error std deviation in percent (%)
-    constexpr double SIGMA_W = 0.1;			// Additive Slip Error std deviation in rad/s
-    constexpr double SIGMA_S = 0.01;		// Multiplicative Skid error std deviation in percent (%)
-    constexpr double SIGMA_G = 0.00873;		// Additive Skid error std deviation in rad
+    constexpr double SIGMA_Q = 0.25;		// Multiplicative Slip Error std deviation in percent (%) - process noise
+    constexpr double SIGMA_W = 0.1;			// Additive Slip Error std deviation in rad/s - process noise
+    constexpr double SIGMA_S = 0.01;		// Multiplicative Skid error std deviation in percent (%) - process noise
+    constexpr double SIGMA_G = 0.00873;		// Additive Skid error std deviation in rad - process noise
+    constexpr double SIGMA_R = 0.005;		// wheel radius noise standard deviation (m) - process noise
+
+    constexpr double SIGMA_RANGE = 0.0; //0.3;		// Observation range standard deviation (m) - observation noise
+    constexpr double SIGMA_BEARING = 0.0; //0.0349;// Observation bearing standard deviation (rad) - observation noise
 }
 
-namespace SlamConstants{
+
+
+namespace SLAM_CONST{
     constexpr double LINC       = 0.1;              // 0.1m length for spline interpolation
     constexpr double DT         = 0.1;				// Sample interval for controller
     constexpr double TEND       = 1000000*DT;       // Total maximum run time for simulator
@@ -42,6 +51,7 @@ namespace SlamConstants{
     constexpr double KO         = 1;                // vehicle orientation error gain
     constexpr double RAD2DEG    = 360/(2*PI);
     constexpr int PLOT_INNO     = 0;
+    constexpr int NUM_LOOPS     = 1;                // how many loops to run as defined in FILE_REFPATH
     constexpr double PATHWINDOW = 20;
     constexpr double DISTANCE_GAP_FOR_CLOSING_LOOP = 0.2;	// In VehicleModel::ComputeControl()
 }

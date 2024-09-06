@@ -24,16 +24,20 @@
 #    constants.h
 #    functions.h
 #    functions.cpp
-#    CMatlabFileReading.h
-#    CMatlabFileReading.cpp
-#    CDynamicArray.h
-#    CDynamicArray.cpp
-#    CDoubleVector.h
-#    CDoubleVector.cpp
+#    MatlabFileReading.h
+#    MatlabFileReading.cpp
+#    DynamicArray.h
+#    DynamicArray.cpp
+#    DoubleVector.h
+#    DoubleVector.cpp
 #    main.cpp
 #)
 
 cmake_minimum_required(VERSION 3.10)
+
+# For filesystem operations
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Set the project name and version
 project(SLAM VERSION 1.0.0)
@@ -44,24 +48,18 @@ include_directories(thirdparty/eigen)
 # Add the executable
 add_executable(SLAM_executable
     main.cpp
-    wrappers.cpp
-    kf.h
-    VehicleModel.cpp
-    VehicleModel.h
     KalmanFilter.h
     KalmanFilter.cpp
     constants.h
-    functions.h
-    functions.cpp
-    MatlabFileReading.h
-    MatlabFileReading.cpp
-    DynamicArray.h
-    DynamicArray.cpp
-    DoubleVector.h
-    DoubleVector.cpp
+    FileIO.h
+    FileIO.cpp
     SimulationSetup.h
     SimulationSetup.cpp
+    functions.h
+    functions.cpp
     types.h
+    Logger.h
+    Logger.cpp
 )
 
 # Add any necessary libraries

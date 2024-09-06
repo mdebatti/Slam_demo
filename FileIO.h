@@ -3,6 +3,7 @@
 #include<iostream>
 #include<fstream>
 #include<cstring>
+#include "types.h"
 using namespace std;
 
 #define SPACE			0x20
@@ -13,19 +14,18 @@ using namespace std;
 #define POINT			0x2E
 
 
-
-
-class CMatlabFileReading
+class FileIO
 {
 public:
-    CMatlabFileReading( const char* filename );
+    FileIO( const char* filename );
     void DisplayStatusInfo();
     void DisplayFile();
-    int GetRowDim() const { return m_nRows; };
-    int GetColDim() const { return m_nCols; };
-    double GetNextDoubleNumber();
-    void RewindFile();
-    const char* GetFileName() const { return m_filename; };
+    int getRowDim() const { return _nRows; };
+    int getColDim() const { return _nCols; };
+    double getNextDoubleNumber();
+    void rewindFile();
+    const char* getFileName() const { return _filename; };
+    DataMatrix getDataMatrix(int expected_num_cols);
 
 private:
     bool isFileFormatValid();
@@ -37,9 +37,9 @@ private:
     bool isOK( char byte) const { return (isLF(byte) || isSP(byte) || isMinus(byte) || isNum(byte) || isPoint(byte)) ? true : false;};
 
 
-    ifstream m_fStream;
-    int m_nRows;
-    int m_nCols;
-    bool m_validFile;
-    char m_filename[256];
+    ifstream _fStream;
+    int _nRows = 0;
+    int _nCols = 0;
+    bool _validFile;
+    char _filename[256];
 };

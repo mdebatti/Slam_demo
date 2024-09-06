@@ -1,12 +1,11 @@
 #pragma once
 
-
-#include <iostream>
-#include <fstream>
 #include "constants.h"
+#include "types.h"
+#include <cmath>  // For std::abs
 
-using namespace std;
+double normalizeAngle(double angle);
 
-
-double a_sub(const double& a1,const double& a2);
-double a_add(const double& a1,const double& a2);
+bool isEqualWithTolerance(int a, double b, double tolerance = 1e-9);
+std::string generateNewFilename(const std::string& addon_string, const std::string& filename);
+void showProgressBar(size_t current, size_t total, size_t barWidth = 50);

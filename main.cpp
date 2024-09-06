@@ -1,114 +1,86 @@
 #include "constants.h"
 #include "KalmanFilter.h"
-//#include "Functions.h"
-//#include "DynamicArray.h"
-#include "VehicleModel.h"
+#include "SimulationSetup.h"
 
-//#include <vector>
-
-//#include <crtdbg.h>			// To check stack status and problems, not include in release version
-//#include <afxtempl.h> //CList
-
-#include <stdlib.h>     /* used for EXIT_SUCCESS */
 #include <Eigen/Dense>
 
 int main(void)
 {
-    try{
+    Logger logger("slam_simulation_output.txt");
 
-    KalmanFilter aEKF;
-
-    // why are RB_OBS_DIM and WRF_OBS_DIM equal to 4?
-    CDynamicArray obsRB(RB_OBS_DIM);		// The observation in range and bearing coordinate
-    CDynamicArray obsWRF(WRF_OBS_DIM);      // ... in the world reference frame system
-
-    // Load the reference path and the beacons from file, compute the true control vector and
-    // the true location of the vehicle
-    const char* file_refpath = "../cpp/RefPath_large_5Loops.txt";
-    const char* file_beacons = "../cpp/Beacons_small_5Loops.txt";
-    int num_loops = 5;
-    VehicleModel VModel(file_refpath, file_beacons, num_loops);
-
-    // The corrupted control vector
-    Eigen::VectorXd u = Eigen::VectorXd::Zero(U_CONTROLS_DIM);  // 4x1 vector of zeros
-
-    int k;
-
-    // Initialise the state vector x
-    x(0) = VModel.GetXtrue(0)(0);
-    x(1) = VModel.GetXtrue(0)(1);
-    x(2) = VModel.GetXtrue(0)(2);
-    x(3) = SlamPhysicalConstants::WHEEL_RADIUS;
-
-
-    // Initialise the state covariance matrix X
-    X(0,0) = SlamNoise::VAR_XX;
-    X(1,1) = SlamNoise::VAR_YY;
-    X(2,2) = SlamNoise::VAR_TT;
-    X(3,3) = SlamNoise::VAR_RR;
-
-#ifndef HELLO
-    k = 0;
-    while( k < VModel.GetUtrueArrayDim()-1 )
+    // To later save in a text file
+    DataMatrix x_vehicle_pred, x_vehicle_est, u_noisy, innovation, innovation_cov;
+    DataVector chi2;
+    try
     {
-        // corrupt the input with the current modeled noise
-        aEKF.CorruptControls(VModel.GetUtrue(k), u );
+        // Load the data from file - see "constants.h" for details
+        SimulationSetup sim_data(FILE_REFPATH, FILE_BEACONS, SLAM_CONST::NUM_LOOPS);
 
-//ccc		::cout << u << endl;
+        // Initialise Kalman filter with initial vehicle position
+        // from the input txt file, all noise parameters in constants.h
+        KalmanFilter aEKF(logger,sim_data.getInitialVehicleState());
 
-        // Prediction Step: the last estimate in fed into the
-        // prediction model along with the controls that bring
-        // the vehicle to the new position after displacement
-        aEKF.PredictState(u);
-//		x_pred[0] = x(0);
-//		x_pred[1] = x(1);
-//		x_pred[2] = x(2);
-//		x_pred[3] = x(3);
+        std::cout << "Running the EKF Slam demo:" << endl;
 
-//	x_List.AddToTail(x_pred);
+        logger.log(-1, "Running the EKF Slam demo");
 
-        // Do an observation from the true location but report it from the predicted one ???
-        // if something observed, match it and update the EK
-
-#ifndef DEGH
-        if( VModel.SimObs(k, obsWRF, obsRB ) )
+        for(int k = 0; k < sim_data.get_num_steps(); ++k)
         {
-            Eigen::VectorXd range_bearing = Eigen::VectorXd::Zero(RB_OBS_DIM);
 
-            for(size_t ii = 0; ii < RB_OBS_DIM; ii++)
+            // Prediction step
+            Kalman::Input u = sim_data.getControlInputsNoisy(k);
+            double n = sim_data.getWheelRadiusNoise(k);
+            aEKF.predictState(u, n);
+
+            // Log to txt
+            aEKF.logControlInput(k, u);
+            aEKF.logStateAndCovariance(k, "State and Covariance after prediction");
+
+            // Log state & noisy inputs for plotting
+            x_vehicle_pred.push_back(aEKF.getVehicleStates());
+            u_noisy.push_back(DataVector(u.data(), u.data() + u.size()));
+
+            // Update step
+            Kalman::ObservationWithTag z = sim_data.getNoisyObservationWithTag(k);
+
+            //log observation
+            aEKF.logObservation(k, z);
+
+            if(aEKF.isMapped(z))
             {
-                range_bearing(ii) = obsRB[ii];
+                aEKF.updateEKF(z);
             }
-
-            // Update the state and covariance matrix if an observation of an already
-            // mapped landmark is made. Otherwise, the landmark has not been observed yet
-            // and the state vector must be augmented. The matching should be implemented with
-            // a manhalobis criterion or a joint compatibility test but here, we just set up
-            // a list with the tags of the mapped beacons, which enables to tell if mapped or not
-            if( aEKF.isMapped(range_bearing ) )
-                aEKF.UpdateEKF(range_bearing );
             else
-                aEKF.AddState(range_bearing );
+            {
+                aEKF.addState(z);
+            }
+            aEKF.logStateAndCovariance(k, "State and Covariance after update");
+            aEKF.logInnovationAndCovariance(k, z, "Innovation vector and its covariance after update");
+
+            // Save state
+            x_vehicle_est.push_back(aEKF.getVehicleStates());
+            innovation.push_back(aEKF.getInnovation());
+            innovation_cov.push_back(aEKF.getInnovationCov(z));
+            chi2.push_back(aEKF.get_chi2());
+
+            // Update the progress bar
+            showProgressBar(k, sim_data.get_num_steps());
         }
-
-        // store all the state x and its covariance matrix in a list object
-        // since the sizes are variable
-
-#endif
-//		x_list.push_back( x );
-//		X_list.push_back( X );
-        k++;
     }
-
-//	x_List.SaveToFile("x_predicted.txt");
-#endif
-
-    }//try
     catch(const std::exception &ex)
     {
         std::cout << ex.what() << endl;
+        return EXIT_FAILURE;
     }
 
-      return(EXIT_SUCCESS);
+    saveDataToFile(x_vehicle_pred, generateNewFilename("x_vehicle_pred", FILE_REFPATH));
+    saveDataToFile(x_vehicle_est, generateNewFilename("x_vehicle_est", FILE_REFPATH));
+    saveDataToFile(u_noisy, generateNewFilename("u_noisy", FILE_REFPATH));
+    saveDataToFile(innovation, generateNewFilename("innovation", FILE_REFPATH));
+    saveDataToFile(innovation_cov, generateNewFilename("innovationCovariance", FILE_REFPATH));
+    saveDataToFile(chi2, generateNewFilename("chi2_innovation_gate", FILE_REFPATH));
+
+    std::cout << "Finished simulation without errors" << endl;
+    return(EXIT_SUCCESS);
 }
 
