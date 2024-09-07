@@ -42,28 +42,94 @@ The Kalman Filter operates in a cycle of three main steps:
 
 ### 1. State Prediction
 
-Given the current state vector and control input, the next state is predicted as:
+Given the current state vector `x(k-1)` and control input `u(k)`, the next state `x(k)` is predicted as:
 
-![State Prediction Formula](https://latex.codecogs.com/png.image?%5Cmathbf%7Bx%7D_k%20%3D%20%5Cmathbf%7BF%7D_k%20%5Cmathbf%7Bx%7D_%7Bk-1%7D%20%2B%20%5Cmathbf%7BB%7D_k%20%5Cmathbf%7Bu%7D_k%20%2B%20%5Cmathbf%7Bw%7D_k)
+x(k) = F(k) * x(k-1) + B(k) * u(k) + w(k)
 
 Where:
-- \( \mathbf{F}_k \) is the state transition matrix, representing how the state evolves from one time step to the next.
-- \( \mathbf{B}_k \) is the control input matrix, relating the control input to the change in state.
+- `F(k)` is the state transition matrix, representing how the state evolves from one time step to the next.
+- `B(k)` is the control input matrix, relating the control input `u(k)` to the change in state.
+- `w(k)` is the process noise, which accounts for uncertainty in the prediction.
+
+The covariance matrix `P(k)` is updated as:
+
+P(k) = F(k) * P(k-1) * F(k)’ + Q(k)
+
+Where `Q(k)` is the process noise covariance matrix.
 
 ### 2. Measurement Update
 
-After the prediction, the Kalman Filter updates the state estimate using the measurement \( \mathbf{z}_k \). The measurement model is:
+After the prediction, the Kalman Filter updates the state estimate using the measurement `z(k)`. The measurement model is:
 
-![Measurement Formula](https://latex.codecogs.com/png.image?%5Cmathbf%7Bz%7D_k%20%3D%20%5Cmathbf%7BH%7D_k%20%5Cmathbf%7Bx%7D_k%20%2B%20%5Cmathbf%7Bv%7D_k)
+z(k) = H(k) * x(k) + v(k)
 
 Where:
-- \( \mathbf{H}_k \) is the observation matrix, relating the state to the measurement.
-- \( \mathbf{v}_k \) is the measurement noise, assumed to be Gaussian with zero mean and covariance \( \mathbf{R}_k \).
+- `H(k)` is the observation matrix, relating the state to the measurement.
+- `v(k)` is the measurement noise, with covariance `R(k)`.
 
-The Kalman Gain \( \mathbf{K}_k \) is calculated as:
+The Kalman Gain `K(k)` is calculated as:
 
-![Kalman Gain Formula](https://latex.codecogs.com/png.image?%5Cmathbf%7BK%7D_k%20%3D%20%5Cmathbf%7BP%7D_k%20%5Cmathbf%7BH%7D_k%5E%7BT%7D%20%5Cleft%28%20%5Cmathbf%7BH%7D_k%20%5Cmathbf%7BP%7D_k%20%5Cmathbf%7BH%7D_k%5E%7BT%7D%20%2B%20%5Cmathbf%7BR%7D_k%20%5Cright%29%5E%7B-1%7D)
+K(k) = P(k) * H(k)’ * inv(H(k) * P(k) * H(k)’ + R(k))
 
 The state estimate is then updated using the Kalman Gain:
 
-![State Update Formula](https://latex.codecogs.com/png.image?%5Cmathbf%7Bx%7D_k%20%3D%20%5Cmathbf%7Bx%7D_k%20%2B%20%5Cmathbf%7BK%7D_k%20%​⬤
+x(k) = x(k) + K(k) * (z(k) - H(k) * x(k))
+
+The covariance matrix is updated as:
+
+P(k) = (I - K(k) * H(k)) * P(k)
+
+Where `I` is the identity matrix.
+
+### 3. Noise Handling
+
+- **Process Noise (`w(k)`)**: Added during the prediction step to account for uncertainties in the system's dynamics.
+- **Measurement Noise (`v(k)`)**: Added to the measurements to account for sensor inaccuracies.
+
+## Getting Started
+
+### Prerequisites
+
+- A C++ compiler supporting C++11 or later.
+- CMake for building the project.
+
+### Building the Project
+
+1. Clone the repository:
+
+    ```bash
+    git clone https://github.com/yourusername/kalman-filter-vehicle-tracking.git
+    cd kalman-filter-vehicle-tracking
+    ```
+
+2. Build the project using CMake:
+
+    ```bash
+    mkdir build
+    cd build
+    cmake ..
+    make
+    ```
+
+3. Run the executable:
+
+    ```bash
+    ./KalmanFilter
+    ```
+
+### File Descriptions
+
+- **main.cpp**: Entry point of the application; sets up the simulation and runs the Kalman Filter.
+- **KalmanFilter.cpp**: Implements the Kalman Filter algorithm.
+- **KalmanFilter.h**: Header file containing the Kalman Filter class definition.
+- **SimulationSetup.cpp**: Contains setup and configuration for the simulation environment, including initializing the target path and generating control inputs.
+- **SimulationSetup.h**: Header file for the simulation setup module.
+- **types.h**: Defines types and constants used throughout the simulation.
+
+## Contributing
+
+Contributions are welcome! Please submit a pull request or open an issue to discuss your ideas.
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
