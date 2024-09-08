@@ -24,7 +24,7 @@ The C++ implementation in this repository compiles and run. The predict(), updat
 
 ### 1. Control Input Generation
 
-Given a target path, the system calculates the necessary control inputs to follow the path. These inputs are used in a kinematic or dynamic model to compute the vehicle's true position and orientation, assuming ideal conditions without noise.
+Given a target path, the system calculates the necessary control inputs to follow the path. These inputs are used in a kinematic model to compute the vehicle's true position and orientation, assuming ideal conditions without noise.
 
 ### 2. Simulated Observations
 
