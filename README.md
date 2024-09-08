@@ -4,6 +4,15 @@ This repository contains a C++ implementation of a Kalman Filter applied to a ve
 
 [![Alt Text](https://github.com/mdebatti/Slam_demo/blob/main/video/EKF_SLAM.gif)](https://github.com/mdebatti/Slam_demo/blob/main/video/EKF_SLAM.mp4)
 
+- Red dot: vehicle
+- blue path:            vehicle trajectory
+- red path:             estimated trajectory
+- Green circles:        landmarks
+- Green dashed circles: observation range (landmark visible to vehicle radar)
+
+note how the estimated path moves away from the true path when landmarks are not observable, and how the estimated path snaps back to the true trajectory as soon as a previously observed feature is re-observed.
+
+The C++ implementation in this repository compiles and run. The predict(), update(), addState() member functions are in agreement with the output of the original matlab implementation shown on the animation. There is however a bug that causes the covariance matrixes and the estimate to diverge in the C++ code.
 
 ## Features
 
@@ -95,14 +104,15 @@ Where `I` is the identity matrix.
 
 - A C++ compiler supporting C++11 or later.
 - CMake for building the project.
+- Eigen for the matrix operations
 
 ### Building the Project
 
 1. Clone the repository:
 
     ```bash
-    git clone https://github.com/yourusername/kalman-filter-vehicle-tracking.git
-    cd kalman-filter-vehicle-tracking
+    git clone https://github.com/mdebatti/Slam_demo.git
+    cd Slam_demo
     ```
 
 2. Build the project using CMake:
@@ -133,6 +143,10 @@ Where `I` is the identity matrix.
 
 Contributions are welcome! Please submit a pull request or open an issue to discuss your ideas.
 
-## License
+**Reference:**
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+[1] Hugh F. Durrant-Whyte, *An Autonomous Guided Vehicle for Cargo Handling Applications*, The International Journal of Robotics Research, Vol. 15, No. 5, October 1996, pp. 407-440.
+[Download PDF](./docs/durrant-whyte1996.pdf)
+
+[2] S. Clark, H. Durrant-Whyte, *Autonomous Land Vehicle Navigation Using Millimeter Wave Radar*, Proceedings of the 1998 IEEE International Conference on Robotics & Automation, Leuven, Belgium, May 1998, Australian Centre for Field Robotics, Sydney University, Australia.
+[Download PDF](./docs/autonomous-land-vehicle-navigation-using-millimeter-wave-radar.pdf)
