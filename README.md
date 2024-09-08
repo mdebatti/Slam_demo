@@ -2,6 +2,9 @@
 
 This repository contains a C++ implementation of a Kalman Filter applied to a vehicle tracking system. The project simulates a vehicle's movement along a predefined path, generates noisy sensor observations, and uses the Kalman Filter algorithm to estimate the vehicle's true position and orientation.
 
+[![Alt Text](https://github.com/mdebatti/Slam_demo/blob/main/video/EKF_SLAM.gif)](https://github.com/mdebatti/Slam_demo/blob/main/video/EKF_SLAM.mp4)
+
+
 ## Features
 
 - **Control Input Generation**: Calculate ideal control inputs (e.g., steering, velocity) based on a target path to predict the vehicle's true state.
