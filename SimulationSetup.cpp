@@ -343,11 +343,6 @@ void SimulationSetup::simulateObservationsAlongPath()
             }
         }
 
-//        if((closestBeaconRange > 50.0) && (closestBeaconIndex > 0))
-//        {
-//            std::cout << "We have a problem!" << std::endl;
-//        }
-
         if(closestBeaconIndex >= 0)
         {
             double vehicleOrientation = normalizeAngle(_vehicle_state_true[stepIndex][2]);
@@ -356,8 +351,8 @@ void SimulationSetup::simulateObservationsAlongPath()
             _beacons_observationsRB_clean[stepIndex][2] = closestBeaconIndex;
 
             // Add noise to observation
-            _beacons_observationsRB_noisy[stepIndex][0] = _beacons_observationsRB_clean[stepIndex][0]; //+ _beacons_observationsRB_noise[stepIndex][0];
-            _beacons_observationsRB_noisy[stepIndex][1] = _beacons_observationsRB_clean[stepIndex][1]; // + _beacons_observationsRB_noise[stepIndex][1];
+            _beacons_observationsRB_noisy[stepIndex][0] = _beacons_observationsRB_clean[stepIndex][0] + _beacons_observationsRB_noise[stepIndex][0];
+            _beacons_observationsRB_noisy[stepIndex][1] = _beacons_observationsRB_clean[stepIndex][1] + _beacons_observationsRB_noise[stepIndex][1];
             _beacons_observationsRB_noisy[stepIndex][2] = closestBeaconIndex;
 
             // Observation in world reference frame
@@ -372,17 +367,6 @@ void SimulationSetup::simulateObservationsAlongPath()
         {
             resetObservations(stepIndex);
         }
-        /*
-        std::cout << "observation (range, bearing, Index):\t"
-                  << _beacons_observationsRB_noisy[stepIndex][0] << "\t"
-                  << _beacons_observationsRB_noisy[stepIndex][1] << "\t"
-                  << _beacons_observationsRB_noisy[stepIndex][2] << "\n";
-
-        std::cout << "observation (X, Y, Index):\t"
-                  << _beacons_observationsWRF_noisy[stepIndex][0] << "\t"
-                  << _beacons_observationsWRF_noisy[stepIndex][1] << "\t"
-                  << _beacons_observationsWRF_noisy[stepIndex][2] << "\n";
-        */
     }
 
     // Handle the last step separately

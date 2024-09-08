@@ -81,9 +81,6 @@ void KalmanFilter::log(int k, const std::string& message) const
 // Function to generate a one-step vehicle prediction from previous estimate and control input.
 void KalmanFilter::predict(const Kalman::Input& u, double wheel_radius_noise)
 {
-    //cout << "Matrix _x:\n" << _x << endl;
-    //cout << "Matrix _X:\n" << _X << endl;
-
     // x(k+1|k) is based on the process model and knowledge of the control input u(k)
     // For the first step, there is no uncertainty
     // and state prediction should be the initial condition
@@ -144,12 +141,6 @@ void KalmanFilter::predict(const Kalman::Input& u, double wheel_radius_noise)
         Kalman::VehicleToLandmarkCrossCovariance(_X) = _F.transpose() * Kalman::VehicleToLandmarkCrossCovariance(_X);
     }
 
-    //cout << "Matrix _G:\n" << _G << endl;
-    //cout << "Matrix _F:\n" << _F << endl;
-    //cout << "Matrix _sigma_u:\n" << _sigma_u << endl;
-    //cout << "Matrix _x:\n" << _x << endl;
-    //cout << "Matrix _X:\n" << _X << endl;
-
     // The prediction covariance of the landmarks does not change in this step!
 
     // For all subsequent calls, add noise by setting the sampling period to its actuall value
@@ -158,9 +149,6 @@ void KalmanFilter::predict(const Kalman::Input& u, double wheel_radius_noise)
 
 void KalmanFilter::update(const Kalman::ObservationWithTag& obsRB)
 {
-    //cout << "Matrix x_:\n" << _x << "\n" << endl;
-    //cout << "Matrix X_:\n" << _X << "\n" << endl;
-
     // Subscripts for accessing observed landmark state and Covariance.
     // landmark tags (in obsRB(2)) start at 0 for first landmark
     int px = SLAM_ARRAY_SIZE::VEHICLE_STATE_DIM + SLAM_ARRAY_SIZE::OBSERVATION_DIM*obsRB(2);
@@ -222,15 +210,8 @@ void KalmanFilter::update(const Kalman::ObservationWithTag& obsRB)
     _H.block<SLAM_ARRAY_SIZE::OBSERVATION_DIM, SLAM_ARRAY_SIZE::VEHICLE_STATE_DIM>(0, 0) = _Hv;
     _H.block<SLAM_ARRAY_SIZE::OBSERVATION_DIM, SLAM_ARRAY_SIZE::OBSERVATION_DIM>(0, px) = _Hp;
 
-    //cout << "Matrix Hv:\n" << _Hv << endl;
-    //cout << "Matrix Hv:\n" << _Hp << endl;
-    //cout << "Matrix H_:\n" << _H << endl;
     //Innovation update, kalman gain, state and covariance innovation
-
-    // ERROR HERE - SHOULD BE A POSITIVE 2x2 MATRIX BUT ENDS HAVE HAVING DIAGONAL ELEMENTS!
     _S  = _H*_X*_H.transpose() + _sigma_z;
-    //cout << "Matrix S_:\n" << _S << "\n" << endl;
-
 
     // Check for NaNs or Infs
     if (_S.hasNaN() || _S.determinant() == 0.0)
@@ -249,7 +230,6 @@ void KalmanFilter::update(const Kalman::ObservationWithTag& obsRB)
     {
         // Kalman Gain (numStates x 2 )
         Kalman::KalmanGain K = _X*_H.transpose()*_S.inverse();
-        //cout << "Matrix K:\n" << K << "\n" << endl;
 
         // Update of the state vector and its covariance matrix
         _x  = _x + K*_v;
@@ -259,8 +239,6 @@ void KalmanFilter::update(const Kalman::ObservationWithTag& obsRB)
     {
         //std::cout << "Innovation gate failed" << endl;
     }
-     //cout << "Matrix x_:\n" << _x << "\n" << endl;
-     //cout << "Matrix X_:\n" << _X << "\n" << endl;
 }
 
 void KalmanFilter::addState(const Kalman::ObservationWithTag& z)
@@ -298,10 +276,6 @@ void KalmanFilter::addState(const Kalman::ObservationWithTag& z)
     _R(0,0) = _var_range;
     _R(1,1) = _var_bearing;
 
-    //cout << "Matrix Tx:\n" << _Tx << "\n" << endl;
-    //cout << "Matrix Tz:\n" << _Tz << "\n" << endl;
-    //cout << "Matrix R:\n" << _R << "\n" << endl;
-
     // Calculate mu (cross-covariance of new landmark with existing state), a N x OBSERVATION_DIM matrix
     Eigen::MatrixXd mu = Kalman::XVehicleAndStateBlockTallAndSkinny(_X) * _Tx.transpose();
 
@@ -333,10 +307,6 @@ void KalmanFilter::addState(const Kalman::ObservationWithTag& z)
         // resize the state to innovation transfer matrix
         _H.resize(SLAM_ARRAY_SIZE::OBSERVATION_DIM, _x.rows());
     }
-    //cout << "Matrix mu:\n" << mu << "\n" << endl;
-    //cout << "Matrix sigma:\n" << Sigma << "\n" << endl;
-    //cout << "Matrix _x:\n" << _x << "\n" << endl;
-    //cout << "Matrix _X:\n" << _X << "\n" << endl;
 
     // Augment the mapped andmark list
     std::cout << "Added beacon #" << int(z(2)) << " (" << _obsWRF(0) << "m, " << _obsWRF(1) << ") to the map" << endl;

@@ -43,15 +43,6 @@ namespace Kalman {
         const Eigen::MatrixXd& _sigma_z,
         const Eigen::VectorXd& _x
     ) {
-        // Print sizes of matrices
-        /*
-        std::cout << "H size: " << H.rows() << "x" << H.cols() << std::endl;
-        std::cout << "_Hv size: " << _Hv.rows() << "x" << _Hv.cols() << std::endl;
-        std::cout << "_Hp size: " << _Hp.rows() << "x" << _Hp.cols() << std::endl;
-        std::cout << "_X size: " << _X.rows() << "x" << _X.cols() << std::endl;
-        std::cout << "_sigma_z size: " << _sigma_z.rows() << "x" << _sigma_z.cols() << std::endl;
-        std::cout << "_x size: " << _x.rows() << "x1" << std::endl;
-        */
 
         // Check for NaN or Inf values in matrices
         if (H.hasNaN() || _Hv.hasNaN() || _Hp.hasNaN() || _X.hasNaN() || _sigma_z.hasNaN() || _x.hasNaN()) {
@@ -125,26 +116,15 @@ namespace Kalman {
                        SLAM_ARRAY_SIZE::VEHICLE_STATE_DIM);
     }
 
-    /*
     // extracts the 2x4 part of the H matrix relating to the vehicle states
-    inline FullStateToInovationTransition VehicleStateToInnovationCovariance(FullStateToInovationTransition& H)
+    inline Eigen::Block<Eigen::MatrixXd> VehicleStateToInnovationCovariance(Eigen::MatrixXd& H)
     {
-        return H.block(0,0, SLAM_ARRAY_SIZE::OBSERVATION_DIM, SLAM_ARRAY_SIZE::VEHICLE_STATE_DIM);
-    }
-
-    // extracts the 2x2 part of the H matrix relating to the observed landmark
-    inline FullStateToInovationTransition LandmarkStateToInnovationCovariance(FullStateToInovationTransition& H, const int index)
-    {
-        return H.block(0,index, SLAM_ARRAY_SIZE::OBSERVATION_DIM, SLAM_ARRAY_SIZE::OBSERVATION_DIM);
-    }
-    */
-    // extracts the 2x4 part of the H matrix relating to the vehicle states
-    inline Eigen::Block<Eigen::MatrixXd> VehicleStateToInnovationCovariance(Eigen::MatrixXd& H) {
         return H.block(0, 0, SLAM_ARRAY_SIZE::OBSERVATION_DIM, SLAM_ARRAY_SIZE::VEHICLE_STATE_DIM);
     }
 
     // extracts the 2x2 part of the H matrix relating to the observed landmark
-    inline Eigen::Block<Eigen::MatrixXd> LandmarkStateToInnovationCovariance(Eigen::MatrixXd& H, const int index) {
+    inline Eigen::Block<Eigen::MatrixXd> LandmarkStateToInnovationCovariance(Eigen::MatrixXd& H, const int index)
+    {
         return H.block(0, index, SLAM_ARRAY_SIZE::OBSERVATION_DIM, SLAM_ARRAY_SIZE::OBSERVATION_DIM);
     }
 }

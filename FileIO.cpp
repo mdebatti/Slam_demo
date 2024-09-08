@@ -75,12 +75,12 @@ double FileIO::getNextDoubleNumber()
         }
         else
         {
-            //cerr << "Failed to read the next double from the file." << endl;
+            cerr << "Failed to read the next double from the file." << endl;
         }
     }
     else
     {
-        //cerr << "In FileIO::getNextDoubleNumber(), file not valid" << endl;
+        cerr << "In FileIO::getNextDoubleNumber(), file not valid" << endl;
     }
 
     return temp;
@@ -217,19 +217,3 @@ void FileIO::rewindFile()
     _fStream.clear();
     _fStream.seekg(ios::beg);
 }
-
-/*
-void main()
-{
-    FileIO file("utrue.txt");
-    file.DisplayStatusInfo();
-
-    for( int i = 0; i < 12; i++ )
-        cout << file.GetNextDoubleNumber() << endl;
-
-    cout << endl;
-
-    for( i = 0; i < 12; i++ )
-        cout << file.GetNextDoubleNumber() << endl;
-}
-*/

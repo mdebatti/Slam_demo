@@ -2,7 +2,6 @@
 #include "KalmanFilter.h"
 #include "SimulationSetup.h"
 #include <memory>
-
 #include <Eigen/Dense>
 
 int main(void)
@@ -10,6 +9,7 @@ int main(void)
     // To later save in a text file
     DataMatrix x_vehicle_pred, x_vehicle_est, u_noisy, innovation, innovation_cov, z_obs;
     DataVector chi2;
+
     try
     {
         // Log simulation outputs in  ~\src\Slam\cpp\outputs
@@ -45,22 +45,16 @@ int main(void)
             auto* kalman_filter = dynamic_cast<KalmanFilter*>(filter.get());
             if (kalman_filter)
             {
-                // Log to txt
+                // Log to a single text file
                 kalman_filter->logControlInput(k, u);
-                kalman_filter->logStateAndCovariance(k, "State and Covariance after prediction");
-
-                // Log state & noisy inputs for plotting
-                x_vehicle_pred.push_back(kalman_filter->getVehicleStates());
-                u_noisy.push_back(DataVector(u.data(), u.data() + u.size()));
-
-                //log observation
                 kalman_filter->logObservation(k, z);
-
                 kalman_filter->logStateAndCovariance(k, "State and Covariance after update");
                 kalman_filter->logInnovationAndCovariance(k, "Innovation vector and its covariance after update");
                 kalman_filter->logStateToInnovationTransferMatrixH(k, "State Covariance to Innovation covariance transfer matrix H");
 
-                // Save state
+                // Log to separate text files
+                x_vehicle_pred.push_back(kalman_filter->getVehicleStates());
+                u_noisy.push_back(DataVector(u.data(), u.data() + u.size()));
                 x_vehicle_est.push_back(kalman_filter->getVehicleStates());
                 innovation.push_back(kalman_filter->getInnovation());
                 innovation_cov.push_back(kalman_filter->getInnovationCov(z));
@@ -68,9 +62,17 @@ int main(void)
                 chi2.push_back(kalman_filter->get_chi2());
             }
 
-            // Update the progress bar
             showProgressBar(k, sim_data.get_num_steps());
         }
+
+        // Save to separate text files in /output folder
+        saveDataToFile(x_vehicle_pred, generateNewFilename("x_vehicle_pred", FILE_REFPATH));
+        saveDataToFile(x_vehicle_est, generateNewFilename("x_vehicle_est", FILE_REFPATH));
+        saveDataToFile(u_noisy, generateNewFilename("u_noisy", FILE_REFPATH));
+        saveDataToFile(innovation, generateNewFilename("innovation", FILE_REFPATH));
+        saveDataToFile(innovation_cov, generateNewFilename("innovationCovariance", FILE_REFPATH));
+        saveDataToFile(chi2, generateNewFilename("chi2_innovation_gate", FILE_REFPATH));
+        saveDataToFile(z_obs, generateNewFilename("z_obs", FILE_REFPATH));
     }
     catch(const std::exception &ex)
     {
@@ -78,17 +80,7 @@ int main(void)
         return EXIT_FAILURE;
     }
 
-    saveDataToFile(x_vehicle_pred, generateNewFilename("x_vehicle_pred", FILE_REFPATH));
-    saveDataToFile(x_vehicle_est, generateNewFilename("x_vehicle_est", FILE_REFPATH));
-    saveDataToFile(u_noisy, generateNewFilename("u_noisy", FILE_REFPATH));
-    saveDataToFile(innovation, generateNewFilename("innovation", FILE_REFPATH));
-    saveDataToFile(innovation_cov, generateNewFilename("innovationCovariance", FILE_REFPATH));
-    saveDataToFile(chi2, generateNewFilename("chi2_innovation_gate", FILE_REFPATH));
-    saveDataToFile(z_obs, generateNewFilename("z_obs", FILE_REFPATH));
-
     std::cout << "Finished simulation without errors" << endl;
     return(EXIT_SUCCESS);
-//*/
-
 }
 
