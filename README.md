@@ -143,7 +143,7 @@ Where `I` is the identity matrix.
 
 Contributions are welcome! Please submit a pull request or open an issue to discuss your ideas.
 
-**Reference:**
+## Reference:
 
 [1] Hugh F. Durrant-Whyte, *An Autonomous Guided Vehicle for Cargo Handling Applications*, The International Journal of Robotics Research, Vol. 15, No. 5, October 1996, pp. 407-440.
 [Download PDF](./docs/durrant-whyte1996.pdf)
