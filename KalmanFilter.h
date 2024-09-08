@@ -10,8 +10,9 @@
 #include "types.h"
 #include "functions.h"
 #include "Logger.h"
+#include "KalmanFilterStrategy.h"
 
-class KalmanFilter
+class KalmanFilter : public KalmanFilterStrategy
 {
 public:
     KalmanFilter(Logger& logger,
@@ -29,14 +30,14 @@ public:
                  double var_bearing = SLAM_NOISE::SIGMA_BEARING*SLAM_NOISE::SIGMA_BEARING);
 
     void CorruptControls(Eigen::VectorXd utrue, Eigen::VectorXd& u);
-    void predictState(const Kalman::Input& u, double wheel_radius_noise);
-    void updateEKF(const Kalman::ObservationWithTag& z);
-    bool matchObservation(Eigen::VectorXd& obs, Eigen::MatrixXd& Beacons);
-    void addState(const Kalman::ObservationWithTag& z);
-    bool isMapped(const Kalman::ObservationWithTag& obsRB);
+    void predict (const Kalman::Input& u, double wheel_radius_noise) override;
+    void update(const Kalman::ObservationWithTag& z) override;
+    void addState(const Kalman::ObservationWithTag& z) override;
+    bool isMapped(const Kalman::ObservationWithTag& obsRB) override;
 
     DataVector getVehicleStates() const;
     DataVector getInnovation() const;
+    DataVector getMeasurement() const;
     DataVector getInnovationCov(const Kalman::ObservationWithTag& z) const;
     double get_chi2() const;
 
@@ -51,7 +52,8 @@ public:
 
     // Logging to a file
     void logStateAndCovariance(int k, const std::string& message) const;
-    void logInnovationAndCovariance(int k, const Kalman::ObservationWithTag& z,  const std::string& message) const;
+    void logInnovationAndCovariance(int k, const std::string& message) const;
+    void logStateToInnovationTransferMatrixH(int k, const std::string& message) const;
 
     void logControlInput(int k, const Kalman::Input& u) const;
     void logObservation(int k, const Kalman::ObservationWithTag& z) const;
@@ -63,6 +65,21 @@ public:
     void displayTransferToInnovationMatrix(const Kalman::ObservationCovariance& H, const std::string& label) const;
     void displayVehicleStateToInnovationTransferMatrix() const;
     void displaylandmarkStateToInnovationTransferMatrix() const;
+
+    // Setter function for manipulating the EKF state for testing from main
+    void set_x(const Kalman::State& x){
+        _x = x;
+    }
+    void set_X(const Kalman::StateCovariance& X){
+        _X = X;
+    }
+
+    void set_z(const Kalman::ObservationWithTag& z){
+        _H.resize(SLAM_ARRAY_SIZE::OBSERVATION_DIM, _x.rows());
+        _z = z;
+    }
+    void set_dt(double dt){_dt = dt;}
+
 
 private:
     // Function to convert an Eigen::VectorXd to std::vector<double>
@@ -93,11 +110,17 @@ private:
     // State transition matrix (4x4 if 4 states) - used in PredictState()
     Kalman::VehicleStateCovariance _F = Kalman::VehicleStateCovariance::Zero();
 
-    // Transfer vehicle state covariance into observation covariance (e.g: 2 x 4 if 2D observation & 4 vehicle states)
+    // Jacobian of the prediction model with respect to the state (e.g: 2 x 4 if 2D observation & 4 vehicle states)
     Kalman::VehicleToObservationTransition _Hv = Kalman::VehicleToObservationTransition::Zero();
 
-    // Transfer landmark state covariance into observation covariance (e.g: 2 x 2 if 2D observation)
+    // Jacobian of the prdiction model with respect to the landmark location (e.g: 2 x 2 if 2D observation)
     Kalman::LandmarkStateToObservationTransition _Hp = Kalman::LandmarkStateToObservationTransition::Zero();
+
+    // Transfer state covariance into innovation covariance (e.g: 2 x N if 2D observation and N states)
+    Kalman::FullStateToInovationTransition _H = Kalman::FullStateToInovationTransition::Zero(SLAM_ARRAY_SIZE::OBSERVATION_DIM,SLAM_ARRAY_SIZE::VEHICLE_STATE_DIM);
+
+    // Observation with matching tag (e.g: 2+1 x 1 if 2D observation)
+    Kalman::ObservationWithTag _z = Kalman::ObservationWithTag::Zero();
 
     // 2x1 vector of zeros (predicted measurement)
     Kalman::Observation _zpred =  Kalman::Observation::Zero();

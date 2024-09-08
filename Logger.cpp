@@ -13,7 +13,7 @@ Logger::Logger(const std::string& filename) : _currentStep(0),
     std::filesystem::create_directories(outputDir);
 
     // Open the log file in append mode
-    _logFile.open(outputDir + filename, std::ios_base::app);
+    _logFile.open(outputDir + filename, std::ios_base::trunc);
 
     if (!_logFile.is_open())
     {
@@ -139,4 +139,7 @@ template void Logger::logMatrix<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dyn
 template void Logger::logMatrix<Kalman::Input>(int k, const std::string& label, const Kalman::Input& matrix);
 template void Logger::logMatrix<Kalman::ObservationWithTag>(int k, const std::string& label, const Kalman::ObservationWithTag& matrix);
 template void Logger::logMatrix<Kalman::ObservationCovariance>(int k, const std::string& label, const Kalman::ObservationCovariance& matrix);
+template void Logger::logMatrix<Kalman::FullStateToInovationTransition>(int k, const std::string& label, const Kalman::FullStateToInovationTransition& matrix);
 template void Logger::logVector<Eigen::Matrix<double, Eigen::Dynamic, 1>>(int k, const std::string& label, const Eigen::Matrix<double, Eigen::Dynamic, 1>& vector);
+
+

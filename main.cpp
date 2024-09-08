@@ -1,67 +1,72 @@
 #include "constants.h"
 #include "KalmanFilter.h"
 #include "SimulationSetup.h"
+#include <memory>
 
 #include <Eigen/Dense>
 
 int main(void)
 {
-    Logger logger("slam_simulation_output.txt");
-
     // To later save in a text file
-    DataMatrix x_vehicle_pred, x_vehicle_est, u_noisy, innovation, innovation_cov;
+    DataMatrix x_vehicle_pred, x_vehicle_est, u_noisy, innovation, innovation_cov, z_obs;
     DataVector chi2;
     try
     {
+        // Log simulation outputs in  ~\src\Slam\cpp\outputs
+        Logger logger("slam_simulation_output.txt");
+
         // Load the data from file - see "constants.h" for details
         SimulationSetup sim_data(FILE_REFPATH, FILE_BEACONS, SLAM_CONST::NUM_LOOPS);
 
-        // Initialise Kalman filter with initial vehicle position
-        // from the input txt file, all noise parameters in constants.h
-        KalmanFilter aEKF(logger,sim_data.getInitialVehicleState());
+        // Construct the KalmanFilter and store it in a unique_ptr of type KalmanFilterStrategy
+        std::unique_ptr<KalmanFilterStrategy> filter = std::make_unique<KalmanFilter>(logger, sim_data.getInitialVehicleState());
 
         std::cout << "Running the EKF Slam demo:" << endl;
 
-        logger.log(-1, "Running the EKF Slam demo");
-
         for(int k = 0; k < sim_data.get_num_steps(); ++k)
         {
-
             // Prediction step
             Kalman::Input u = sim_data.getControlInputsNoisy(k);
             double n = sim_data.getWheelRadiusNoise(k);
-            aEKF.predictState(u, n);
-
-            // Log to txt
-            aEKF.logControlInput(k, u);
-            aEKF.logStateAndCovariance(k, "State and Covariance after prediction");
-
-            // Log state & noisy inputs for plotting
-            x_vehicle_pred.push_back(aEKF.getVehicleStates());
-            u_noisy.push_back(DataVector(u.data(), u.data() + u.size()));
+            filter->predict(u,n);
 
             // Update step
             Kalman::ObservationWithTag z = sim_data.getNoisyObservationWithTag(k);
 
-            //log observation
-            aEKF.logObservation(k, z);
-
-            if(aEKF.isMapped(z))
+            if(filter->isMapped(z))
             {
-                aEKF.updateEKF(z);
+                filter->update(z);
             }
             else
             {
-                aEKF.addState(z);
+                filter->addState(z);
             }
-            aEKF.logStateAndCovariance(k, "State and Covariance after update");
-            aEKF.logInnovationAndCovariance(k, z, "Innovation vector and its covariance after update");
 
-            // Save state
-            x_vehicle_est.push_back(aEKF.getVehicleStates());
-            innovation.push_back(aEKF.getInnovation());
-            innovation_cov.push_back(aEKF.getInnovationCov(z));
-            chi2.push_back(aEKF.get_chi2());
+            auto* kalman_filter = dynamic_cast<KalmanFilter*>(filter.get());
+            if (kalman_filter)
+            {
+                // Log to txt
+                kalman_filter->logControlInput(k, u);
+                kalman_filter->logStateAndCovariance(k, "State and Covariance after prediction");
+
+                // Log state & noisy inputs for plotting
+                x_vehicle_pred.push_back(kalman_filter->getVehicleStates());
+                u_noisy.push_back(DataVector(u.data(), u.data() + u.size()));
+
+                //log observation
+                kalman_filter->logObservation(k, z);
+
+                kalman_filter->logStateAndCovariance(k, "State and Covariance after update");
+                kalman_filter->logInnovationAndCovariance(k, "Innovation vector and its covariance after update");
+                kalman_filter->logStateToInnovationTransferMatrixH(k, "State Covariance to Innovation covariance transfer matrix H");
+
+                // Save state
+                x_vehicle_est.push_back(kalman_filter->getVehicleStates());
+                innovation.push_back(kalman_filter->getInnovation());
+                innovation_cov.push_back(kalman_filter->getInnovationCov(z));
+                z_obs.push_back(kalman_filter->getMeasurement());
+                chi2.push_back(kalman_filter->get_chi2());
+            }
 
             // Update the progress bar
             showProgressBar(k, sim_data.get_num_steps());
@@ -79,8 +84,11 @@ int main(void)
     saveDataToFile(innovation, generateNewFilename("innovation", FILE_REFPATH));
     saveDataToFile(innovation_cov, generateNewFilename("innovationCovariance", FILE_REFPATH));
     saveDataToFile(chi2, generateNewFilename("chi2_innovation_gate", FILE_REFPATH));
+    saveDataToFile(z_obs, generateNewFilename("z_obs", FILE_REFPATH));
 
     std::cout << "Finished simulation without errors" << endl;
     return(EXIT_SUCCESS);
+//*/
+
 }
 

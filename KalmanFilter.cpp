@@ -5,15 +5,6 @@
 
 #include "KalmanFilter.h"
 
-double _var_q;				// Variance of the multicative along track noise (slip) in (%)^2
-double _var_w;				// Variance of the additive along track noise (slip) in (rad/s)^2
-double _var_s;				// Variance of the multicative cross track noise (skip) in (%)^2
-double _var_g;				// Variance of the additive cross track noise (skip) in (rad)^2
-double _var_r;				// Variance of the additive wheel radius noise (deformation) in m^2
-double _var_range;			// Variance of the additive range noise in (m)^2
-double _var_bearing;		// Variance of the additive bearing noise in (rad)^2
-
-
 KalmanFilter::KalmanFilter(Logger& logger,
                            const Kalman::VehicleState& x_init,
                            const Kalman::VehicleState& diag_X_init,
@@ -53,16 +44,24 @@ void KalmanFilter::logStateAndCovariance(int k, const std::string& message) cons
     _logger.logMatrix(k, message + " - Covariance (_X)", _X);
 }
 
-void KalmanFilter::logInnovationAndCovariance(int k, const Kalman::ObservationWithTag& z,  const std::string& message) const
+void KalmanFilter::logInnovationAndCovariance(int k, const std::string& message) const
 {
     // Only log if there has been a feature matched
-    if (z(2) >=0)
+    if (_z(2) >=0)
     {
         _logger.logMatrix(k, message + " - Innovation (_v)", _v);
         _logger.logMatrix(k, message + " - Covariance (_S)", _S);
     }
 }
 
+void KalmanFilter::logStateToInnovationTransferMatrixH(int k,  const std::string& message) const
+{
+    // Only log if there has been a feature matched
+    if (_z(2) >=0)
+    {
+        _logger.logMatrix(k, message + " - Covariance (_H)", _H);
+    }
+}
 
 void KalmanFilter::logControlInput(int k, const Kalman::Input& u) const
 {
@@ -80,8 +79,11 @@ void KalmanFilter::log(int k, const std::string& message) const
 }
 
 // Function to generate a one-step vehicle prediction from previous estimate and control input.
-void KalmanFilter::predictState(const Kalman::Input& u, double wheel_radius_noise)
+void KalmanFilter::predict(const Kalman::Input& u, double wheel_radius_noise)
 {
+    //cout << "Matrix _x:\n" << _x << endl;
+    //cout << "Matrix _X:\n" << _X << endl;
+
     // x(k+1|k) is based on the process model and knowledge of the control input u(k)
     // For the first step, there is no uncertainty
     // and state prediction should be the initial condition
@@ -113,13 +115,13 @@ void KalmanFilter::predictState(const Kalman::Input& u, double wheel_radius_nois
     _F(1,3) =  _dt*u(0)*sin( phi );
 
     _F(2,2) =  1.0;
-    _F(2,3) =  _dt*u(1)*sin(u(1)) / SLAM_PHYSICAL_CONST::WHEEL_BASE;
+    _F(2,3) =  _dt*u(0)*sin(u(1)) / SLAM_PHYSICAL_CONST::WHEEL_BASE;
 
     _F(3,3) =  1.0;
 
     // source error covariance
-    _sigma_u(0,0) = (_var_q*wheel_radius_deformed*u(0))*(_var_q*wheel_radius_deformed*u(0)) + _var_w*wheel_radius_deformed*wheel_radius_deformed;
-    _sigma_u(1,1) = (_var_s*wheel_radius_deformed*u(0)*u(0))*(_var_s*wheel_radius_deformed*u(0)*u(1)) + (_var_g*wheel_radius_deformed*u(0))*(_var_g*wheel_radius_deformed*u(0));
+    _sigma_u(0,0) = _var_q*(wheel_radius_deformed*u(0))*(wheel_radius_deformed*u(0)) + _var_w*wheel_radius_deformed*wheel_radius_deformed;
+    _sigma_u(1,1) = _var_s*(wheel_radius_deformed*u(0)*u(1))*(wheel_radius_deformed*u(0)*u(1)) + _var_g*(wheel_radius_deformed*u(0))*(wheel_radius_deformed*u(0));
     _sigma_u(2,2) = _var_r;
 
     // state prediction
@@ -142,14 +144,23 @@ void KalmanFilter::predictState(const Kalman::Input& u, double wheel_radius_nois
         Kalman::VehicleToLandmarkCrossCovariance(_X) = _F.transpose() * Kalman::VehicleToLandmarkCrossCovariance(_X);
     }
 
+    //cout << "Matrix _G:\n" << _G << endl;
+    //cout << "Matrix _F:\n" << _F << endl;
+    //cout << "Matrix _sigma_u:\n" << _sigma_u << endl;
+    //cout << "Matrix _x:\n" << _x << endl;
+    //cout << "Matrix _X:\n" << _X << endl;
+
     // The prediction covariance of the landmarks does not change in this step!
 
     // For all subsequent calls, add noise by setting the sampling period to its actuall value
     _dt = SLAM_CONST::DT;
 }
 
-void KalmanFilter::updateEKF(const Kalman::ObservationWithTag& obsRB)
+void KalmanFilter::update(const Kalman::ObservationWithTag& obsRB)
 {
+    //cout << "Matrix x_:\n" << _x << "\n" << endl;
+    //cout << "Matrix X_:\n" << _X << "\n" << endl;
+
     // Subscripts for accessing observed landmark state and Covariance.
     // landmark tags (in obsRB(2)) start at 0 for first landmark
     int px = SLAM_ARRAY_SIZE::VEHICLE_STATE_DIM + SLAM_ARRAY_SIZE::OBSERVATION_DIM*obsRB(2);
@@ -192,32 +203,42 @@ void KalmanFilter::updateEKF(const Kalman::ObservationWithTag& obsRB)
     _zpred(0) = r;
     _zpred(1) = normalizeAngle(atan2(dy,dx) - phi);  //normalisation
 
+    // keep track of observation (logging)
+    _z = obsRB;
+
     // observation z and its covariance matrix exprimed in range and bearing
     _sigma_z(0,0) = _var_range;
     _sigma_z(1,1) = _var_bearing;
 
-    _v(0) = obsRB(0) - _zpred(0);
-    _v(1) = normalizeAngle(obsRB(1) - _zpred(1));
+    _v(0) = _z(0) - _zpred(0);
+    _v(1) = normalizeAngle(_z(1) - _zpred(1));
 
     // 2 x numStates to transfer full state covariance to innovation covariance (2 x 2)
-    Kalman::FullStateToInovationTransition H = Kalman::FullStateToInovationTransition::Zero(SLAM_ARRAY_SIZE::OBSERVATION_DIM, _x.rows());
+    _H.setZero();
 
     // Assign Hpi to Hi(i2, landIndex)
 
     // Direct assignment to the blocks in matrix H
-    H.block<SLAM_ARRAY_SIZE::OBSERVATION_DIM, SLAM_ARRAY_SIZE::VEHICLE_STATE_DIM>(0, 0) = _Hv;
-    H.block<SLAM_ARRAY_SIZE::OBSERVATION_DIM, SLAM_ARRAY_SIZE::OBSERVATION_DIM>(0, px) = _Hp;
+    _H.block<SLAM_ARRAY_SIZE::OBSERVATION_DIM, SLAM_ARRAY_SIZE::VEHICLE_STATE_DIM>(0, 0) = _Hv;
+    _H.block<SLAM_ARRAY_SIZE::OBSERVATION_DIM, SLAM_ARRAY_SIZE::OBSERVATION_DIM>(0, px) = _Hp;
 
+    //cout << "Matrix Hv:\n" << _Hv << endl;
+    //cout << "Matrix Hv:\n" << _Hp << endl;
+    //cout << "Matrix H_:\n" << _H << endl;
     //Innovation update, kalman gain, state and covariance innovation
 
     // ERROR HERE - SHOULD BE A POSITIVE 2x2 MATRIX BUT ENDS HAVE HAVING DIAGONAL ELEMENTS!
-    _S  = H*_X*H.transpose() + _sigma_z;
+    _S  = _H*_X*_H.transpose() + _sigma_z;
+    //cout << "Matrix S_:\n" << _S << "\n" << endl;
+
 
     // Check for NaNs or Infs
-    if (_S.hasNaN() || _S.determinant() == 0.0) {
+    if (_S.hasNaN() || _S.determinant() == 0.0)
+    {
         std::cerr << "Warning: _S contains NaN or is singular." << std::endl;
     }
-    if (_v.hasNaN()) {
+    if (_v.hasNaN())
+    {
         std::cerr << "Warning: _v contains NaN." << std::endl;
     }
 
@@ -227,7 +248,8 @@ void KalmanFilter::updateEKF(const Kalman::ObservationWithTag& obsRB)
     if ( _chi2 < 7.5)
     {
         // Kalman Gain (numStates x 2 )
-        Kalman::KalmanGain K = _X*H.transpose()*_S.inverse();
+        Kalman::KalmanGain K = _X*_H.transpose()*_S.inverse();
+        //cout << "Matrix K:\n" << K << "\n" << endl;
 
         // Update of the state vector and its covariance matrix
         _x  = _x + K*_v;
@@ -235,8 +257,10 @@ void KalmanFilter::updateEKF(const Kalman::ObservationWithTag& obsRB)
     }
     else
     {
-        std::cout << "Innovation gate failed" << endl;
+        //std::cout << "Innovation gate failed" << endl;
     }
+     //cout << "Matrix x_:\n" << _x << "\n" << endl;
+     //cout << "Matrix X_:\n" << _X << "\n" << endl;
 }
 
 void KalmanFilter::addState(const Kalman::ObservationWithTag& z)
@@ -260,7 +284,7 @@ void KalmanFilter::addState(const Kalman::ObservationWithTag& z)
 
     // Transformation matrix (2 x 4) - Matrix initialised at 0 at creation
     _Tx(0,0) = 1.0;
-    _Tx(0,2) = -dyr + dyo;
+    _Tx(0,2) = -(dyr + dyo);
     _Tx(1,1) = 1.0;
     _Tx(1,2) = dxr + dxo;
 
@@ -273,6 +297,10 @@ void KalmanFilter::addState(const Kalman::ObservationWithTag& z)
     // Noise covariance matrix of measurement in (range, bearing)
     _R(0,0) = _var_range;
     _R(1,1) = _var_bearing;
+
+    //cout << "Matrix Tx:\n" << _Tx << "\n" << endl;
+    //cout << "Matrix Tz:\n" << _Tz << "\n" << endl;
+    //cout << "Matrix R:\n" << _R << "\n" << endl;
 
     // Calculate mu (cross-covariance of new landmark with existing state), a N x OBSERVATION_DIM matrix
     Eigen::MatrixXd mu = Kalman::XVehicleAndStateBlockTallAndSkinny(_X) * _Tx.transpose();
@@ -301,7 +329,14 @@ void KalmanFilter::addState(const Kalman::ObservationWithTag& z)
         // Set the top-right and bottom-left corners with mu
         _X.topRightCorner(mu.rows(), mu.cols()) = mu;                   // This ensures correct dimensions
         _X.bottomLeftCorner(mu.cols(), mu.rows()) = mu.transpose();
+
+        // resize the state to innovation transfer matrix
+        _H.resize(SLAM_ARRAY_SIZE::OBSERVATION_DIM, _x.rows());
     }
+    //cout << "Matrix mu:\n" << mu << "\n" << endl;
+    //cout << "Matrix sigma:\n" << Sigma << "\n" << endl;
+    //cout << "Matrix _x:\n" << _x << "\n" << endl;
+    //cout << "Matrix _X:\n" << _X << "\n" << endl;
 
     // Augment the mapped andmark list
     std::cout << "Added beacon #" << int(z(2)) << " (" << _obsWRF(0) << "m, " << _obsWRF(1) << ") to the map" << endl;
@@ -391,6 +426,11 @@ DataVector KalmanFilter::getVehicleStates() const
 DataVector KalmanFilter::getInnovation() const
 {
     return eigenToStdVector(_v.head(SLAM_ARRAY_SIZE::OBSERVATION_DIM));
+};
+
+DataVector KalmanFilter::getMeasurement() const
+{
+    return eigenToStdVector(_z.head(SLAM_ARRAY_SIZE::OBSERVATION_SIM_DIM));
 };
 
 double KalmanFilter::get_chi2() const

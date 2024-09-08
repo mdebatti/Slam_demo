@@ -32,11 +32,11 @@ namespace SLAM_NOISE {
     constexpr double SIGMA_Q = 0.25;		// Multiplicative Slip Error std deviation in percent (%) - process noise
     constexpr double SIGMA_W = 0.1;			// Additive Slip Error std deviation in rad/s - process noise
     constexpr double SIGMA_S = 0.01;		// Multiplicative Skid error std deviation in percent (%) - process noise
-    constexpr double SIGMA_G = 0.00873;		// Additive Skid error std deviation in rad - process noise
+    constexpr double SIGMA_G = 0.00872665;  // Additive Skid error std deviation in rad - process noise
     constexpr double SIGMA_R = 0.005;		// wheel radius noise standard deviation (m) - process noise
 
-    constexpr double SIGMA_RANGE = 0.0; //0.3;		// Observation range standard deviation (m) - observation noise
-    constexpr double SIGMA_BEARING = 0.0; //0.0349;// Observation bearing standard deviation (rad) - observation noise
+    constexpr double SIGMA_RANGE = 0.3;		// Observation range standard deviation (m) - observation noise
+    constexpr double SIGMA_BEARING = 0.0349;// Observation bearing standard deviation (rad) - observation noise
 }
 
 
