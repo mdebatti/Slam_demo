@@ -7,7 +7,7 @@
 int main(void)
 {
     // To later save in a text file
-    DataMatrix x_vehicle_pred, x_vehicle_est, u_noisy, innovation, innovation_cov, z_obs;
+    DataMatrix x_vehicle_pred, x_vehicle_est, u_noisy, innovation, innovation_cov, z_obs, z_pred;
     DataVector chi2;
 
     try
@@ -35,11 +35,11 @@ int main(void)
 
             if(filter->isMapped(z))
             {
-                filter->update(z);
+                filter->update();
             }
             else
             {
-                filter->addState(z);
+                filter->addState();
             }
 
             auto* kalman_filter = dynamic_cast<KalmanFilter*>(filter.get());
@@ -59,6 +59,7 @@ int main(void)
                 innovation.push_back(kalman_filter->getInnovation());
                 innovation_cov.push_back(kalman_filter->getInnovationCov(z));
                 z_obs.push_back(kalman_filter->getMeasurement());
+                z_pred.push_back(kalman_filter->getPredictedMeasurement());
                 chi2.push_back(kalman_filter->get_chi2());
             }
 
@@ -73,6 +74,7 @@ int main(void)
         saveDataToFile(innovation_cov, generateNewFilename("innovationCovariance", FILE_REFPATH));
         saveDataToFile(chi2, generateNewFilename("chi2_innovation_gate", FILE_REFPATH));
         saveDataToFile(z_obs, generateNewFilename("z_obs", FILE_REFPATH));
+        saveDataToFile(z_pred, generateNewFilename("z_pred", FILE_REFPATH));
     }
     catch(const std::exception &ex)
     {

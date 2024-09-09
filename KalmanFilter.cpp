@@ -142,11 +142,13 @@ void KalmanFilter::predict(const Kalman::Input& u, double wheel_radius_noise)
     _dt = SLAM_CONST::DT;
 }
 
-void KalmanFilter::update(const Kalman::ObservationWithTag& obsRB)
+void KalmanFilter::update()
 {
+    // important, _z is set in isMapped(z), which must always be called before addState (modify code otherwise)
+
     // Subscripts for accessing observed landmark state and Covariance.
     // landmark tags (in obsRB(2)) start at 0 for first landmark
-    int px = SLAM_ARRAY_SIZE::VEHICLE_STATE_DIM + SLAM_ARRAY_SIZE::OBSERVATION_DIM*obsRB(2);
+    int px = SLAM_ARRAY_SIZE::VEHICLE_STATE_DIM + SLAM_ARRAY_SIZE::OBSERVATION_DIM*_z(2);
 
     // X and Y offset between observed landmark and radar origin
     double dx = _x(px) - (_x(0) + SLAM_PHYSICAL_CONST::XOFFSET*cos(_x(2)) - SLAM_PHYSICAL_CONST::YOFFSET*sin(_x(2)));
@@ -185,9 +187,6 @@ void KalmanFilter::update(const Kalman::ObservationWithTag& obsRB)
     // observation model
     _zpred(0) = r;
     _zpred(1) = normalizeAngle(atan2(dy,dx) - phi);  //normalisation
-
-    // keep track of observation (logging)
-    _z = obsRB;
 
     // observation z and its covariance matrix exprimed in range and bearing
     _sigma_z(0,0) = _var_range;
@@ -234,20 +233,22 @@ void KalmanFilter::update(const Kalman::ObservationWithTag& obsRB)
     }
 }
 
-void KalmanFilter::addState(const Kalman::ObservationWithTag& z)
+void KalmanFilter::addState()
 {
+    // important, _z is set in isMapped(z), which must always be called before addState (modify code otherwise)
+
     // early return if the matching index was -1 (no observation on this step)
-    if (z(2) < 0.0)
+    if (_z(2) < 0.0)
     {
         return;
     }
 
     // bearing of observed landmark in global reference frame
-    double phi = _x(2) + z(1);
+    double phi = _x(2) + _z(1);
 
     // X and Y distance from radar origin to landmark
-    double dxo = z(0)*cos(phi);
-    double dyo = z(0)*sin(phi);
+    double dxo = _z(0)*cos(phi);
+    double dyo = _z(0)*sin(phi);
 
     // Offset from vehicle reference frame to radar reference frame
     double dxr = SLAM_PHYSICAL_CONST::XOFFSET*cos(_x(2)) - SLAM_PHYSICAL_CONST::YOFFSET*sin(_x(2));
@@ -302,10 +303,10 @@ void KalmanFilter::addState(const Kalman::ObservationWithTag& z)
     }
 
     // Augment the mapped andmark list
-    std::cout << "Added beacon #" << int(z(2)) << " (" << _obsWRF(0) << "m, " << _obsWRF(1) << ") to the map" << endl;
+    std::cout << "Added beacon #" << int(_z(2)) << " (" << _obsWRF(0) << "m, " << _obsWRF(1) << ") to the map" << endl;
     displayStateCovarianceMatrix();
 
-    _mappedLandmarkList.push_back( z(2));
+    _mappedLandmarkList.push_back( _z(2));
 }
 
 void KalmanFilter::displayStateCovarianceMatrix() const
@@ -362,6 +363,9 @@ void KalmanFilter::displaylandmarkStateToInnovationTransferMatrix() const
 
 bool KalmanFilter::isMapped(const Kalman::ObservationWithTag& obsRB)
 {
+    // important, _z must be set here! Otherwise modify update() and addState() functions
+    _z = obsRB;
+
     int numMapped = _mappedLandmarkList.size();
     bool result = false;
 
@@ -394,6 +398,11 @@ DataVector KalmanFilter::getInnovation() const
 DataVector KalmanFilter::getMeasurement() const
 {
     return eigenToStdVector(_z.head(SLAM_ARRAY_SIZE::OBSERVATION_SIM_DIM));
+};
+
+DataVector KalmanFilter::getPredictedMeasurement() const
+{
+    return eigenToStdVector(_zpred.head(SLAM_ARRAY_SIZE::OBSERVATION_DIM));
 };
 
 double KalmanFilter::get_chi2() const

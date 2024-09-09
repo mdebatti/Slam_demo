@@ -8,7 +8,7 @@ namespace SLAM_PHYSICAL_CONST{
     constexpr double WHEEL_BASE     = 1.0;		// vehicle wheel base (m)
     constexpr double WHEEL_RADIUS   = 0.3;      // nomial wheel radius (m)
     constexpr double R_RATE         = 12.566;   // rotation angular velocity  of radar (rads/s)
-    constexpr double R_MAX_RANGE    = 1000;      // Maximum range of the radar
+    constexpr double R_MAX_RANGE    = 20;      // Maximum range of the radar
 
     constexpr int XOFFSET           = 0;        // see kinematic model of vehicle
     constexpr int YOFFSET           = 0;        // see kinematic model of vehicle
@@ -50,6 +50,7 @@ namespace SLAM_CONST{
     constexpr double KP         = 1;                // vehicle position error gain
     constexpr double KO         = 1;                // vehicle orientation error gain
     constexpr double RAD2DEG    = 360/(2*PI);
+    constexpr int INIT_STEPS    = 300;              // number of steps at the start for collecting observations
     constexpr int PLOT_INNO     = 0;
     constexpr int NUM_LOOPS     = 1;                // how many loops to run as defined in FILE_REFPATH
     constexpr double PATHWINDOW = 20;

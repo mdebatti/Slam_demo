@@ -31,13 +31,14 @@ public:
 
     void CorruptControls(Eigen::VectorXd utrue, Eigen::VectorXd& u);
     void predict (const Kalman::Input& u, double wheel_radius_noise) override;
-    void update(const Kalman::ObservationWithTag& z) override;
-    void addState(const Kalman::ObservationWithTag& z) override;
+    void update() override;
+    void addState() override;
     bool isMapped(const Kalman::ObservationWithTag& obsRB) override;
 
     DataVector getVehicleStates() const;
     DataVector getInnovation() const;
     DataVector getMeasurement() const;
+    DataVector getPredictedMeasurement() const;
     DataVector getInnovationCov(const Kalman::ObservationWithTag& z) const;
     double get_chi2() const;
 

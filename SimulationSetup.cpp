@@ -10,7 +10,7 @@ SimulationSetup::SimulationSetup(const char* refpathFile, const char* beaconFile
     _ref_path = storeFileToVectorOfVectors (refpathFile, SLAM_ARRAY_SIZE::VEHICLE_PATH_DIM);
     _beacons_location = storeFileToVectorOfVectors (beaconFile, SLAM_ARRAY_SIZE::OBSERVATION_DIM);
     _num_path_points = _ref_path.size();
-    _num_steps = SLAM_CONST::NUM_LOOPS*_num_path_points;
+    _num_steps = SLAM_CONST::NUM_LOOPS*_num_path_points + SLAM_CONST::INIT_STEPS;
     _num_beacons = _beacons_location.size();
 
     // Create and fill the time vector used in the simulation (for radar observation)
@@ -99,7 +99,21 @@ void SimulationSetup::generateProcessAndMeasurementNoise()
     // Process noise for wheel radius
     _vehicle_wheel_radius_state_additive_noise.resize(_num_steps);
 
-    for (int rr = 0; rr < _num_steps; ++rr)
+    for (int rr = 0; rr < SLAM_CONST::INIT_STEPS; ++rr)
+    {
+        // Initialise all vehicle noise to 0 while stationnary
+        _vehicle_controls_noisy[rr].resize(_vehicle_controls_clean[rr].size());
+        _vehicle_controls_noisy[rr][0] = 0.0;
+        _vehicle_controls_noisy[rr][1] = 0.0;
+        _vehicle_wheel_radius_state_additive_noise[rr] = 0.0;
+
+        // Observations still subject to noise
+        _beacons_observationsRB_noise[rr].resize(SLAM_ARRAY_SIZE::OBSERVATION_DIM);
+        _beacons_observationsRB_noise[rr][0] = SLAM_NOISE::SIGMA_RANGE * normal_dist(gen);
+        _beacons_observationsRB_noise[rr][1] = SLAM_NOISE::SIGMA_BEARING * normal_dist(gen);
+    }
+
+    for (int rr = SLAM_CONST::INIT_STEPS; rr < _num_steps; ++rr)
     {
         double u0 = _vehicle_controls_clean[rr][0];
         double u1 = _vehicle_controls_clean[rr][1];
@@ -121,7 +135,6 @@ void SimulationSetup::generateProcessAndMeasurementNoise()
         _vehicle_wheel_radius_state_additive_noise[rr] = SLAM_CONST::DT*SLAM_NOISE::SIGMA_R * normal_dist(gen);
 
         // Measurement noise for the observations
-        _beacons_observationsRB_noise.resize(_num_steps);
         _beacons_observationsRB_noise[rr].resize(SLAM_ARRAY_SIZE::OBSERVATION_DIM);
         _beacons_observationsRB_noise[rr][0] = SLAM_NOISE::SIGMA_RANGE * normal_dist(gen);
         _beacons_observationsRB_noise[rr][1] = SLAM_NOISE::SIGMA_BEARING * normal_dist(gen);
@@ -142,18 +155,24 @@ void SimulationSetup::generateControlsAndTrueVehicleState()
     }
 
     // Initialisation with the initial position of the vehicle (X, Y, Theta, R)
-    _vehicle_state_true[0][0] = _ref_path[0][0];
-    _vehicle_state_true[0][1] = _ref_path[0][1];
-    _vehicle_state_true[0][2] = atan2( _ref_path[1][1] - _ref_path[0][1], _ref_path[1][0] - _ref_path[0][0] );
-    _vehicle_state_true[0][3] = SLAM_PHYSICAL_CONST::WHEEL_RADIUS;
+    for(int ii = 0; ii < SLAM_CONST::INIT_STEPS; ++ii)
+    {
+        _vehicle_state_true[ii][0] = _ref_path[0][0];
+        _vehicle_state_true[ii][1] = _ref_path[0][1];
+        _vehicle_state_true[ii][2] = atan2( _ref_path[1][1] - _ref_path[0][1], _ref_path[1][0] - _ref_path[0][0] );
+        _vehicle_state_true[ii][3] = SLAM_PHYSICAL_CONST::WHEEL_RADIUS;
 
-    // Initialisation of control vector [ Wheel angular velocity, steering angle]
-    _vehicle_controls_clean[0][0] = SLAM_CONST::VVEL;
-    _vehicle_controls_clean[0][1] = 0.0;
+        // Initialisation of control vector [ Wheel angular velocity, steering angle]
+        _vehicle_controls_clean[ii][0] = 0.0;
+        _vehicle_controls_clean[ii][1] = 0.0;
+    }
 
-    // Control Loop - The true path and true input are stocked in xtrue and utrue
+    // This will keep the wheel angular velocity constant
+    _vehicle_controls_clean[SLAM_CONST::INIT_STEPS - 1][0] = SLAM_CONST::VVEL;
+
+    // Control Loop - The true path and true input are stored in xtrue and utrue
     // should start with k = 1 as there is an access to k-1 in calcAndSaveControlAndTrueVehicleState
-    for(int k = 1; k < _num_steps; ++k)
+    for(int k = SLAM_CONST::INIT_STEPS; k < _num_steps; ++k)
     {
         // At time k, get the error between actual position and reference path
         // Use it to compute the new control vector for time k+1 along
@@ -285,6 +304,7 @@ void SimulationSetup::resizeObservationVectors(int stepIndex)
     _beacons_observationsRB_noisy[stepIndex].resize(dimension, 0.0);
     _beacons_observationsWRF_clean[stepIndex].resize(dimension, 0.0);
     _beacons_observationsWRF_noisy[stepIndex].resize(dimension, 0.0);
+    resetObservations(stepIndex);
 }
 
 void SimulationSetup::simulateObservationsAlongPath()
@@ -334,10 +354,11 @@ void SimulationSetup::simulateObservationsAlongPath()
             double dy = _beacons_location[beaconIndex][1] - radarY1;
             double range = sqrt(dx * dx + dy * dy);
 
-            double dotProduct1 = ((dy * radarDx1) - (dx * radarDy1));
+            double dotProduct1 = ((_beacons_location[beaconIndex][1] - radarY1) * radarDx1) - ((_beacons_location[beaconIndex][0] - radarX1) * radarDy1);
             double dotProduct2 = ((_beacons_location[beaconIndex][1] - radarY2) * radarDx2) - ((_beacons_location[beaconIndex][0] - radarX2) * radarDy2);
 
-            if((range < SLAM_PHYSICAL_CONST::R_MAX_RANGE) && (dotProduct1 > 0) && (dotProduct2 < 0) && (range < closestBeaconRange)) {
+            if((range < SLAM_PHYSICAL_CONST::R_MAX_RANGE) && (dotProduct1 > 0) && (dotProduct2 < 0) && (range < closestBeaconRange))
+            {
                 closestBeaconRange = range;
                 closestBeaconIndex = beaconIndex;
             }
@@ -363,7 +384,8 @@ void SimulationSetup::simulateObservationsAlongPath()
             _beacons_observationsWRF_noisy[stepIndex][0] = radarX1 + _beacons_observationsRB_noisy[stepIndex][0] * cos(_beacons_observationsRB_noisy[stepIndex][1] + _vehicle_state_true[stepIndex][2]);
             _beacons_observationsWRF_noisy[stepIndex][1] = radarY1 + _beacons_observationsRB_noisy[stepIndex][0] * sin(_beacons_observationsRB_noisy[stepIndex][1] + _vehicle_state_true[stepIndex][2]);
             _beacons_observationsWRF_noisy[stepIndex][2] = closestBeaconIndex;
-        } else
+        }
+        else
         {
             resetObservations(stepIndex);
         }
