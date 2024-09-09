@@ -1,8 +1,3 @@
-// KalmanFilter.cpp
-//
-// NOTE: the Matlab cpp math library is used herein, the indexing syntax for mwArray object
-// is the same as in Matlab (i.e: starts from 1 and not 0)
-
 #include "KalmanFilter.h"
 
 KalmanFilter::KalmanFilter(Logger& logger,
@@ -203,8 +198,6 @@ void KalmanFilter::update(const Kalman::ObservationWithTag& obsRB)
 
     // 2 x numStates to transfer full state covariance to innovation covariance (2 x 2)
     _H.setZero();
-
-    // Assign Hpi to Hi(i2, landIndex)
 
     // Direct assignment to the blocks in matrix H
     _H.block<SLAM_ARRAY_SIZE::OBSERVATION_DIM, SLAM_ARRAY_SIZE::VEHICLE_STATE_DIM>(0, 0) = _Hv;
