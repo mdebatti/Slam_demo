@@ -1,5 +1,11 @@
 #pragma once
 
+// File directory for outputs (used in constructor of Logger)
+constexpr const char* FILE_OUTPUT_DIR = "../cpp/outputs/";
+
+// File for general outputs (as opposed to single variables in matrix / vector format
+constexpr const char* FILE_NAME_FOR_GENERAL_OUTPUTS = "slam_simulation_output.txt";
+
 // File paths for inputs to the simulation: target path (X,Y) and beacon location (X, Y)
 constexpr const char* FILE_REFPATH = "../cpp/inputs/RefPath_small_5Loops.txt";
 constexpr const char* FILE_BEACONS = "../cpp/inputs/Beacons_small_5Loops.txt";
@@ -39,8 +45,6 @@ namespace SLAM_NOISE {
     constexpr double SIGMA_BEARING = 0.0349;// Observation bearing standard deviation (rad) - observation noise
 }
 
-
-
 namespace SLAM_CONST{
     constexpr double LINC       = 0.1;              // 0.1m length for spline interpolation
     constexpr double DT         = 0.1;				// Sample interval for controller
@@ -55,4 +59,5 @@ namespace SLAM_CONST{
     constexpr int NUM_LOOPS     = 1;                // how many loops to run as defined in FILE_REFPATH
     constexpr double PATHWINDOW = 20;
     constexpr double DISTANCE_GAP_FOR_CLOSING_LOOP = 0.2;	// In VehicleModel::ComputeControl()
+    constexpr double CHI_SQUARED                   = 7.5;   // Innovation gate
 }

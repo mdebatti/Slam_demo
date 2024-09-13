@@ -109,8 +109,8 @@ void SimulationSetup::generateProcessAndMeasurementNoise()
 
         // Observations still subject to noise
         _beacons_observationsRB_noise[rr].resize(SLAM_ARRAY_SIZE::OBSERVATION_DIM);
-        _beacons_observationsRB_noise[rr][0] = SLAM_NOISE::SIGMA_RANGE * normal_dist(gen);
-        _beacons_observationsRB_noise[rr][1] = SLAM_NOISE::SIGMA_BEARING * normal_dist(gen);
+        _beacons_observationsRB_noise[rr][0] = 0.0; //SLAM_NOISE::SIGMA_RANGE * normal_dist(gen);
+        _beacons_observationsRB_noise[rr][1] = 0.0; //SLAM_NOISE::SIGMA_BEARING * normal_dist(gen);
     }
 
     for (int rr = SLAM_CONST::INIT_STEPS; rr < _num_steps; ++rr)
@@ -124,20 +124,20 @@ void SimulationSetup::generateProcessAndMeasurementNoise()
         // Generate Gaussian noise for wheel angular velocity
         double noise_q = normal_dist(gen); // Gaussian noise for wheel angular velocity
         double noise_w = normal_dist(gen); // Gaussian noise for control inputs
-        _vehicle_controls_noisy[rr][0] = u0 + SLAM_NOISE::SIGMA_Q * noise_q * u0 + SLAM_NOISE::SIGMA_W * noise_w;
+        _vehicle_controls_noisy[rr][0] = u0;// + SLAM_NOISE::SIGMA_Q * noise_q * u0 + SLAM_NOISE::SIGMA_W * noise_w;
 
         // Generate Gaussian noise for steer angle
         double noise_s = normal_dist(gen); // Gaussian noise for steer angle
         double noise_g = normal_dist(gen); // Gaussian noise for control inputs
-        _vehicle_controls_noisy[rr][1] = u1 + SLAM_NOISE::SIGMA_S * noise_s * u1 + SLAM_NOISE::SIGMA_G * noise_g;
+        _vehicle_controls_noisy[rr][1] = u1;// + SLAM_NOISE::SIGMA_S * noise_s * u1 + SLAM_NOISE::SIGMA_G * noise_g;
 
         // Process noise for wheel radius
-        _vehicle_wheel_radius_state_additive_noise[rr] = SLAM_CONST::DT*SLAM_NOISE::SIGMA_R * normal_dist(gen);
+        _vehicle_wheel_radius_state_additive_noise[rr] = 0.0; //SLAM_CONST::DT*SLAM_NOISE::SIGMA_R * normal_dist(gen);
 
         // Measurement noise for the observations
         _beacons_observationsRB_noise[rr].resize(SLAM_ARRAY_SIZE::OBSERVATION_DIM);
-        _beacons_observationsRB_noise[rr][0] = SLAM_NOISE::SIGMA_RANGE * normal_dist(gen);
-        _beacons_observationsRB_noise[rr][1] = SLAM_NOISE::SIGMA_BEARING * normal_dist(gen);
+        _beacons_observationsRB_noise[rr][0] = 0.0;//SLAM_NOISE::SIGMA_RANGE * normal_dist(gen);
+        _beacons_observationsRB_noise[rr][1] = 0.0;//SLAM_NOISE::SIGMA_BEARING * normal_dist(gen);
 
         //std::cout << "U noisy should be:\t" << _vehicle_controls_noisy[rr][0] << " \t" << _vehicle_controls_noisy[rr][1] << std::endl;
     }
@@ -240,17 +240,25 @@ std::pair<double, double> SimulationSetup::calcVehiclePositionAndOrientationErro
 void SimulationSetup::calcAndSaveControlAndTrueVehicleState(const int k,
                                                             const std::pair<double, double> positionAndOrientationErrors)
 {
-    if (k < 1) {
-        std::cerr << "Intput parameter k in  " << __func__ << " (in " << __FILE__ << ") was less than 1 (disallowed as there is access to [k-1])" << std::endl;
-        std::exit(EXIT_FAILURE);
+    if (k < 1)
+    {
+        std::ostringstream msg;
+        msg << "Intput parameter k in  " << __func__ << " (in " << __FILE__ << ") was less than 1 (disallowed as there is access to [k-1])" << std::endl;
+        std::cerr << msg.str();
+        throw std::runtime_error(msg.str());
     }
 
+    // Position and orientation error at last time step
+    static double perr_last;
+    static double oerr_last;
+
+    // Position and orientation error at current time step
     double perr = positionAndOrientationErrors.first;
     double oerr = positionAndOrientationErrors.second;
 
     // The control vector utrue = [v, steer]' (for now, convert to [wheel angular velocity, steer] later)
     _vehicle_controls_clean[k][0] = _vehicle_controls_clean[k-1][0];
-    _vehicle_controls_clean[k][1] = normalizeAngle( SLAM_CONST::KP*perr +SLAM_CONST::KO*oerr);
+    _vehicle_controls_clean[k][1] = normalizeAngle( SLAM_CONST::KP*perr_last +SLAM_CONST::KO*oerr_last);
 
     double x_prev = _vehicle_state_true[k-1][0];
     double y_prev = _vehicle_state_true[k-1][1];
@@ -263,6 +271,10 @@ void SimulationSetup::calcAndSaveControlAndTrueVehicleState(const int k,
     _vehicle_state_true[k][1] = y_prev + SLAM_CONST::DT*u_wheel_lin_vel*sin( or_prev + u_wheel_steer);
     _vehicle_state_true[k][2] = or_prev +SLAM_CONST::DT*u_wheel_lin_vel*sin(u_wheel_steer) / SLAM_PHYSICAL_CONST::WHEEL_BASE;
     _vehicle_state_true[k][3] = _vehicle_state_true[k-1][3];
+
+    //(This is just to attempt to replicate the exact time histories of the matlab script)
+    perr_last = perr;
+    oerr_last = oerr;
 }
 
 
@@ -399,58 +411,3 @@ void SimulationSetup::simulateObservationsAlongPath()
     saveDataToFile(_beacons_observationsRB_noisy, generateNewFilename("beacons_observationsRB_noisy", FILE_REFPATH));
 
 }
-
-template <typename T>
-void saveDataToFile(const T& data, const std::string& filename)
-{
-    // Define the relative path to the outputs directory
-     std::string outputDir = "../cpp/outputs/";
-
-     // Create the directory if it doesn't exist
-     std::filesystem::create_directories(outputDir);
-
-     // Append the filename to the output directory path
-     std::string fullPath = outputDir + filename;
-
-     std::ofstream file(fullPath);
-     if (!file.is_open())
-     {
-         std::cerr << "Failed to open file: " << fullPath << std::endl;
-         return;
-     }
-
-    file.precision(20);
-
-    // Handle 2D vector (DataMatrix)
-    if constexpr (std::is_same_v<T, DataMatrix>)
-    {
-        for(int rr = 0; rr < data.size(); ++rr )
-        {
-            int n_cols = data[rr].size();
-            for(int cc = 0; cc < n_cols; ++cc)
-            {
-                file << data[rr][cc];
-                if (cc < n_cols - 1)  // Only add a space if it's not the last element
-                {
-                    file << " ";
-                }
-            }
-            file << '\n';  // Move to the next line after all columns are written
-        }
-    }
-
-    // Handle 1D vector (DataVector)
-    if constexpr (std::is_same_v<T, DataVector>)
-    {
-        for(int rr = 0; rr < data.size(); ++rr )
-        {
-            file << data[rr] << '\n';
-        }
-    }
-
-    file.close();
-}
-
-// Explicit template instantiation
-template void saveDataToFile<DataMatrix>(const DataMatrix& data, const std::string& filename);
-template void saveDataToFile<DataVector>(const DataVector& data, const std::string& filename);

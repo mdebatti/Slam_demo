@@ -15,6 +15,8 @@ add_executable(SLAM_executable
     main.cpp
     KalmanFilterStrategy.cpp
     KalmanFilterStrategy.h
+    LoggingKalmanFilterDecorator.h
+    LoggingKalmanFilterDecorator.cpp
     KalmanFilter.h
     KalmanFilter.cpp
     constants.h

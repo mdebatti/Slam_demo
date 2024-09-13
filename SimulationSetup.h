@@ -1,14 +1,9 @@
 #pragma once
 
 #include <random> // Required for random_device, mt19937, normal_distribution
-
 #include "types.h"
 #include "FileIO.h"
 #include "functions.h"
-
-
-template <typename T>
-void saveDataToFile(const T& data, const std::string& filename);
 
 class SimulationSetup
 {

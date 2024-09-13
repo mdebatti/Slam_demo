@@ -90,13 +90,15 @@ namespace Kalman {
     }
 
     // extracts the 4xN cross covariance matrix between vehicle and landmarks (N being number of landmarks)
-    // will throw an error is
-    inline Submatrix VehicleToLandmarkCrossCovariance(Eigen::MatrixXd& X)
+    // that is the right-sup-corner of _X (NUM_VEHICLE_STATE x NUM_LANDMARK_STATES)
+    inline Submatrix RightSupCornerPredictionCrossCovariance(Eigen::MatrixXd& X)
     {
         if (X.rows() <= SLAM_ARRAY_SIZE::VEHICLE_STATE_DIM )
         {
-            std::cerr << "Cannot extract submatrix when there are no landmarks!  " << __func__ << " (in " << __FILE__ << ")" << std::endl;
-            std::exit(EXIT_FAILURE);
+            std::ostringstream msg;
+            msg << "Cannot extract submatrix when there are no landmarks!  " << __func__ << " (in " << __FILE__ << ")" << std::endl;
+            std::cerr << msg.str();
+            throw std::runtime_error(msg.str());
         }
             return X.block(0, SLAM_ARRAY_SIZE::VEHICLE_STATE_DIM,
                        SLAM_ARRAY_SIZE::VEHICLE_STATE_DIM,
@@ -104,12 +106,15 @@ namespace Kalman {
     }
 
     // extracts the Nx4 cross covariance matrix between landmarks and vehicle (N being number of landmarks)
-    inline Submatrix LandmarkToVehicleCrossCovariance(Eigen::MatrixXd& X)
+    // that is the left-sub-corner of _X (NUM_LANDMARK_STATES x NUM_VEHICLE_STATE)
+    inline Submatrix LeftSubCornerPredictionCrossCovariance(Eigen::MatrixXd& X)
     {
         if (X.rows() <= SLAM_ARRAY_SIZE::VEHICLE_STATE_DIM )
         {
-            std::cerr << "Cannot extract submatrix when there are no landmarks!  " << __func__ << " (in " << __FILE__ << ")" << std::endl;
-            std::exit(EXIT_FAILURE);
+            std::ostringstream msg;
+            msg << "Cannot extract submatrix when there are no landmarks!  " << __func__ << " (in " << __FILE__ << ")" << std::endl;
+            std::cerr << msg.str();
+            throw std::runtime_error(msg.str());
         }
         return X.block(SLAM_ARRAY_SIZE::VEHICLE_STATE_DIM,0,
                        X.rows() - SLAM_ARRAY_SIZE::VEHICLE_STATE_DIM,

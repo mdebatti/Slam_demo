@@ -2,6 +2,7 @@
 
 #include <Eigen/Dense>
 #include <iostream>
+#include <fstream>
 #include <random>
 #include <cmath>
 #include <math.h>
@@ -11,6 +12,9 @@
 #include "functions.h"
 #include "Logger.h"
 #include "KalmanFilterStrategy.h"
+#include <optional>
+
+class Logger;
 
 class KalmanFilter : public KalmanFilterStrategy
 {
@@ -29,17 +33,17 @@ public:
                  double var_range = SLAM_NOISE::SIGMA_RANGE*SLAM_NOISE::SIGMA_RANGE,
                  double var_bearing = SLAM_NOISE::SIGMA_BEARING*SLAM_NOISE::SIGMA_BEARING);
 
-    void CorruptControls(Eigen::VectorXd utrue, Eigen::VectorXd& u);
     void predict (const Kalman::Input& u, double wheel_radius_noise) override;
     void update() override;
-    void addState() override;
+    bool addState() override;
     bool isMapped(const Kalman::ObservationWithTag& obsRB) override;
 
     DataVector getVehicleStates() const;
+    DataVector getVehicleStateStdev() const;
     DataVector getInnovation() const;
     DataVector getMeasurement() const;
     DataVector getPredictedMeasurement() const;
-    DataVector getInnovationCov(const Kalman::ObservationWithTag& z) const;
+    DataVector getInnovationCov() const;
     double get_chi2() const;
 
     // public member function that allow to set and modify the noise parameters of the Kalman Filter
@@ -61,28 +65,60 @@ public:
     void log(int k, const std::string& message) const;
 
     // Displaying to terminal
-    void displayStateCovarianceMatrix() const;
+    void displayStateCovarianceMatrix(const std::optional<std::string>& message = std::nullopt, std::optional<int> k = -1) const;
     void displayHMatrix(const Kalman::FullStateToInovationTransition& H) const;
     void displayTransferToInnovationMatrix(const Kalman::ObservationCovariance& H, const std::string& label) const;
     void displayVehicleStateToInnovationTransferMatrix() const;
     void displaylandmarkStateToInnovationTransferMatrix() const;
 
     // Setter function for manipulating the EKF state for testing from main
-    void set_x(const Kalman::State& x){
-        _x = x;
-    }
-    void set_X(const Kalman::StateCovariance& X){
-        _X = X;
-    }
-
+    void set_x(const Kalman::State& x){_x = x;}
+    void set_X(const Kalman::StateCovariance& X){_X = X;}
+    void set_dt(double dt){_dt = dt;}
+    void reset_K(){_K.setZero();};
+    void reset_S(){_S.setZero();};
+    void reset_Hv(){_Hv.setZero();};
+    void reset_sigma_z(){_sigma_z.setZero();};
+    void reset_Hp(){_Hp.setZero();};
+    void reset_Tx(){_Tx.setZero();};
+    void reset_Tz(){_Tz.setZero();};
+    void reset_mu(){_mu.setZero();};
+    void reset_sigma_new_landmark(){_sigma_new_landmark.setZero();};
     void set_z(const Kalman::ObservationWithTag& z){
         _H.resize(SLAM_ARRAY_SIZE::OBSERVATION_DIM, _x.rows());
         _z = z;
     }
-    void set_dt(double dt){_dt = dt;}
 
+    // Getter function to access the internal matrix of the KalmanFilter class for logging
+    const Kalman::State& get_x() const { return _x; };
+    const Kalman::StateCovariance& get_X() const { return _X; }
+    const Kalman::KalmanGain& get_K() const { return _K; }
+    const Kalman::ObservationCovariance& get_S() const { return _S; }
+    const Kalman::ObservationWithTag& get_z() const { return _z; }
+    const Kalman::Observation& get_obsWRF() const { return _obsWRF; }
+    const Kalman::VehicleToObservationTransition& get_Tx() const { return _Tx; }
+    const Kalman::ObservationCovariance& get_Tz() const { return _Tz; }
+    const Kalman::StateCovariance& get_mu() const { return _mu; }
+    const Kalman::ObservationCovariance& get_sigma_new_landmark() const { return _sigma_new_landmark; }
+    const Kalman::FullStateToInovationTransition& get_H() const { return _H; }
+    const Kalman::InputCovarianceTransfer& get_G() const { return _G; }
+    const Kalman::VehicleStateCovariance& get_F() const { return _F; }
+    const Kalman::InputCovariance& get_sigma_u() const { return _sigma_u; }
+    const Kalman::VehicleToObservationTransition& get_Hv() const { return _Hv; }
+    const Kalman::LandmarkStateToObservationTransition& get_Hp() const { return _Hp; }
+    const Kalman::LandmarkStateToObservationTransition& get_sigma_z() const { return _sigma_z; }
 
 private:
+    // Matrix operations in predict() step
+    void predictMatrixOperationsDo();
+
+    // Matrix operations in update() step
+    void updateMatrixOperationsDo();
+
+    // test functions
+    void testMatrixOperationsInPredict();
+    void testMatrixOperationsInUpdate(const Kalman::State& x_init);
+
     // Function to convert an Eigen::VectorXd to std::vector<double>
     DataVector eigenToStdVector(const Eigen::VectorXd& eigenVec) const;
 
@@ -129,6 +165,9 @@ private:
     // 2x1 vector of zeros (measurement residual)
     Kalman::Observation _v =  Kalman::Observation::Zero();
 
+    // Kalman gain is a dynamic matrix of the number of states x number of observations
+    Kalman::KalmanGain _K;
+
     // 2x2 matrix of zeros (measurement covariance)
     Kalman::ObservationCovariance _sigma_z = Kalman::ObservationCovariance::Zero();
 
@@ -141,13 +180,19 @@ private:
     // Initialize Tz as 2x2  - used in AddState()
     Kalman::ObservationCovariance _Tz = Kalman::ObservationCovariance::Zero();
 
+    // mu for the existing state covariance when adding a landmark (dynamic matrix) - used in AddState
+    Kalman::StateCovariance _mu = Kalman::StateCovariance ::Zero(SLAM_ARRAY_SIZE::VEHICLE_STATE_DIM,SLAM_ARRAY_SIZE::VEHICLE_STATE_DIM);
+
+    // Covariance of new landmark - used in AddState
+    Kalman::ObservationCovariance _sigma_new_landmark = Eigen::Matrix2d::Zero();
+
     // Initialize R (Noise covariance matrix) as 2x2 - used in AddState()
     Kalman::ObservationCovariance _R = Kalman::ObservationCovariance::Zero();
 
     // Initialize obsWRF (Observation matrix) as 2x1 - used in AddState()
     Kalman::Observation _obsWRF = Kalman::Observation::Zero();
 
-    // Needs to be set at 0 for initialisation, changed after first step
+    // Time step of simulation
     double _dt = 0.0;
 
     // For keeping track of which beacons have already been observed
@@ -155,6 +200,9 @@ private:
 
     // Chi2 used as innovation gate
     double _chi2;
+
+    // Subscripts for accessing observed landmark state and Covariance.
+    int _px = 0;
 
     // For logging to a text file
     Logger& _logger;

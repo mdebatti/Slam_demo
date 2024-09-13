@@ -60,3 +60,89 @@ void showProgressBar(size_t current, size_t total, size_t barWidth)
     std::cout << "] " << int(progress * 100.0) << " %\r";
     std::cout.flush();
 }
+
+template <typename T>
+void saveDataToFile(const T& data, const std::string& filename)
+{
+    // Define the relative path to the outputs directory
+     std::string outputDir = FILE_OUTPUT_DIR;
+
+     // Create the directory if it doesn't exist
+     std::filesystem::create_directories(outputDir);
+
+     // Append the filename to the output directory path
+     std::string fullPath = outputDir + filename;
+
+     std::ofstream file(fullPath);
+     if (!file.is_open())
+     {
+         std::cerr << "Failed to open file: " << fullPath << std::endl;
+         return;
+     }
+
+    file.precision(20);
+
+    // Handle 2D vector (DataMatrix)
+    if constexpr (std::is_same_v<T, DataMatrix>)
+    {
+        for(int rr = 0; rr < data.size(); ++rr )
+        {
+            int n_cols = data[rr].size();
+            for(int cc = 0; cc < n_cols; ++cc)
+            {
+                file << data[rr][cc];
+                if (cc < n_cols - 1)  // Only add a space if it's not the last element
+                {
+                    file << " ";
+                }
+            }
+            file << '\n';  // Move to the next line after all columns are written
+        }
+    }
+
+    // Handle 1D vector (DataVector)
+    if constexpr (std::is_same_v<T, DataVector>)
+    {
+        for(int rr = 0; rr < data.size(); ++rr )
+        {
+            file << data[rr] << '\n';
+        }
+    }
+
+    file.close();
+}
+
+template <typename Matrix, typename Matrix2>
+void testEigenMaxtrixEquality(const Matrix& M1, const Matrix2& M2, const std::string& label_str, const std::string& label_str2)
+{
+    if (M1.isApprox(M2))
+    {
+        std::cout << "\nMatrix multiplication test for " << label_str2 << " step passed (" << label_str << ")!\n" << std::endl;
+    }
+    else
+    {
+        std::ostringstream msg;
+        msg << "Matrix manipulation results are wrong in " << label_str2 << " in " << __func__ << "(" << __FILE__ << ")\n" << std::endl;
+        std::cerr << msg.str();
+
+        std::cout << label_str << ":\n" << M1 << "\n\n";
+        std::cout << label_str << " (expected output):\n\n" << M2 << std::endl;
+
+        throw std::runtime_error(msg.str());
+    }
+}
+
+template void testEigenMaxtrixEquality<Kalman::ObservationCovariance, Kalman::ObservationCovariance>(const Kalman::ObservationCovariance& M1, const Kalman::ObservationCovariance& M2, const std::string& label_str, const std::string& label_str2);
+template void testEigenMaxtrixEquality<Kalman::KalmanGain, Kalman::KalmanGain>(const Kalman::KalmanGain& M1, const Kalman::KalmanGain& M2, const std::string& label_str, const std::string& label_str2);
+template void testEigenMaxtrixEquality<Kalman::State, Kalman::State>(const Kalman::State& M1, const Kalman::State& M2, const std::string& label_str, const std::string& label_str2);
+template void testEigenMaxtrixEquality<Kalman::StateCovariance, Kalman::StateCovariance>(const Kalman::StateCovariance& M1, const Kalman::StateCovariance& M2, const std::string& label_str, const std::string& label_str2);
+
+
+
+
+// Explicit template instantiation
+template void saveDataToFile<DataMatrix>(const DataMatrix& data, const std::string& filename);
+template void saveDataToFile<DataVector>(const DataVector& data, const std::string& filename);
+
+
+
