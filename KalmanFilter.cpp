@@ -26,8 +26,6 @@ KalmanFilter::KalmanFilter(Logger& logger,
     testMatrixOperationsInUpdate(x_init);
     testMatrixOperationsInAddState(x_init);
 
-    // RESET STATE OF MATRIXES - CHECK IF NEEDED
-
     // Initialise the state covariance matrix - It only contains the 4 vehicle states at the begining (i.e: no landmarks)
     _X.diagonal() = diag_X_init;
 
