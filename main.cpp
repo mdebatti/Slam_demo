@@ -29,8 +29,7 @@ int main(void)
 
         std::cout << "Running the EKF Slam demo:" << endl;
 
-
-        for(int k = 0; k < 1000; ++k) //sim_data.get_num_steps()
+        for(int k = 0; k < sim_data.get_num_steps(); ++k) //sim_data.get_num_steps()
         {
             // Prediction step
             Kalman::Input u = sim_data.getControlInputsNoisy(k);
@@ -48,6 +47,8 @@ int main(void)
             {
                 loggingKalmanFilter->addState();
             }
+
+            // Show progress
             showProgressBar(k, sim_data.get_num_steps());
         }
 

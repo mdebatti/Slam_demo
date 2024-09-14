@@ -11,7 +11,6 @@
 #include "types.h"
 #include "functions.h"
 
-
 class KalmanFilter;
 
 
@@ -22,7 +21,6 @@ public:
     ~Logger();
 
     void log(int k, const std::string& message);
-    void setStep(int step);
 
     void logKalmanFilterDataAfterPrediction(KalmanFilter* filter, const Kalman::Input& u);
     void logKalmanFilterDataAfterUpdate(KalmanFilter* filter);
@@ -42,6 +40,8 @@ public:
     void logMatrixInMatlabVariableFormatSingleOperation(std::ofstream& file, const std::string& label, const MatrixType& matrix, long int k);
 
 private:
+    void setStep(int step);
+
     std::ofstream _logFile;
     int _currentStep;   // To keep track of the simulation step
     int _lastStep;      // To introduce a line break

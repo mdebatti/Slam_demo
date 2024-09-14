@@ -6,13 +6,13 @@
 #include <random>
 #include <cmath>
 #include <math.h>
+#include <optional>
 
 #include "constants.h"
 #include "types.h"
 #include "functions.h"
 #include "Logger.h"
 #include "KalmanFilterStrategy.h"
-#include <optional>
 
 class Logger;
 
@@ -21,10 +21,7 @@ class KalmanFilter : public KalmanFilterStrategy
 public:
     KalmanFilter(Logger& logger,
                  const Kalman::VehicleState& x_init = Kalman::VehicleState::Zero(),
-                 const Kalman::VehicleState& diag_X_init = Kalman::VehicleState(SLAM_NOISE::VAR_XX,
-                                                                                SLAM_NOISE::VAR_YY,
-                                                                                SLAM_NOISE::VAR_TT,
-                                                                                SLAM_NOISE::VAR_RR),
+                 const Kalman::VehicleState& diag_X_init = Kalman::VehicleState(SLAM_NOISE::VAR_XX, SLAM_NOISE::VAR_YY, SLAM_NOISE::VAR_TT, SLAM_NOISE::VAR_RR),
                  double var_q = SLAM_NOISE::SIGMA_Q*SLAM_NOISE::SIGMA_Q,
                  double var_w = SLAM_NOISE::SIGMA_W*SLAM_NOISE::SIGMA_W,
                  double var_s = SLAM_NOISE::SIGMA_S*SLAM_NOISE::SIGMA_S,
@@ -37,14 +34,6 @@ public:
     void update() override;
     bool addState() override;
     bool isMapped(const Kalman::ObservationWithTag& obsRB) override;
-
-    DataVector getVehicleStates() const;
-    DataVector getVehicleStateStdev() const;
-    DataVector getInnovation() const;
-    DataVector getMeasurement() const;
-    DataVector getPredictedMeasurement() const;
-    DataVector getInnovationCov() const;
-    double get_chi2() const;
 
     // public member function that allow to set and modify the noise parameters of the Kalman Filter
     void setAlongTrackNoiseMultiplicativeStdev( const double& sigma_q) { _var_q = sigma_q*sigma_q; };
@@ -84,10 +73,7 @@ public:
     void reset_Tz(){_Tz.setZero();};
     void reset_mu(){_mu.setZero();};
     void reset_sigma_new_landmark(){_sigma_new_landmark.setZero();};
-    void set_z(const Kalman::ObservationWithTag& z){
-        _H.resize(SLAM_ARRAY_SIZE::OBSERVATION_DIM, _x.rows());
-        _z = z;
-    }
+    void set_z(const Kalman::ObservationWithTag& z);
 
     // Getter function to access the internal matrix of the KalmanFilter class for logging
     const Kalman::State& get_x() const { return _x; };
@@ -108,15 +94,29 @@ public:
     const Kalman::LandmarkStateToObservationTransition& get_Hp() const { return _Hp; }
     const Kalman::LandmarkStateToObservationTransition& get_sigma_z() const { return _sigma_z; }
 
+    // Getter functions for logging
+    DataVector getVehicleStates() const;
+    DataVector getVehicleStateStdev() const;
+    DataVector getInnovation() const;
+    DataVector getMeasurement() const;
+    DataVector getPredictedMeasurement() const;
+    DataVector getInnovationCov() const;
+    double get_chi2() const;
+
 private:
+
     // Matrix operations in predict() step
     void predictMatrixOperationsDo();
 
     // Matrix operations in update() step
     void updateMatrixOperationsDo();
 
+    // Matrix operations in addState() step
+    void addStateMatrixOperationDo();
+
     // test functions
     void testMatrixOperationsInPredict();
+    void testMatrixOperationsInAddState(const Kalman::State& x_init);
     void testMatrixOperationsInUpdate(const Kalman::State& x_init);
 
     // Function to convert an Eigen::VectorXd to std::vector<double>
@@ -192,7 +192,7 @@ private:
     // Initialize obsWRF (Observation matrix) as 2x1 - used in AddState()
     Kalman::Observation _obsWRF = Kalman::Observation::Zero();
 
-    // Time step of simulation
+    // Time step of simulation (non-zero only when vehicle moving)
     double _dt = 0.0;
 
     // For keeping track of which beacons have already been observed

@@ -1,6 +1,5 @@
 #include "functions.h"
 
-
 double normalizeAngle(double angle)
 {
     // Normalize the angle to be within the range -PI to PI
@@ -33,7 +32,8 @@ std::string generateNewFilename(const std::string& addon_string, const std::stri
     std::string new_string = addon_string + "_" + name_part;
 
     // Step 4: Remove any leading underscores from the resulting string
-    while (!new_string.empty() && new_string[0] == '_') {
+    while (!new_string.empty() && new_string[0] == '_')
+    {
         new_string.erase(0, 1);
     }
 
@@ -49,7 +49,8 @@ void showProgressBar(size_t current, size_t total, size_t barWidth)
     size_t pos = static_cast<size_t>(barWidth * progress);
 
     std::cout << "[";
-    for (size_t i = 0; i < barWidth; ++i) {
+    for (size_t i = 0; i < barWidth; ++i)
+    {
         if (i < pos)
             std::cout << "=";
         else if (i == pos)
@@ -132,13 +133,11 @@ void testEigenMaxtrixEquality(const Matrix& M1, const Matrix2& M2, const std::st
     }
 }
 
+// Explicit template instantiation
 template void testEigenMaxtrixEquality<Kalman::ObservationCovariance, Kalman::ObservationCovariance>(const Kalman::ObservationCovariance& M1, const Kalman::ObservationCovariance& M2, const std::string& label_str, const std::string& label_str2);
 template void testEigenMaxtrixEquality<Kalman::KalmanGain, Kalman::KalmanGain>(const Kalman::KalmanGain& M1, const Kalman::KalmanGain& M2, const std::string& label_str, const std::string& label_str2);
 template void testEigenMaxtrixEquality<Kalman::State, Kalman::State>(const Kalman::State& M1, const Kalman::State& M2, const std::string& label_str, const std::string& label_str2);
 template void testEigenMaxtrixEquality<Kalman::StateCovariance, Kalman::StateCovariance>(const Kalman::StateCovariance& M1, const Kalman::StateCovariance& M2, const std::string& label_str, const std::string& label_str2);
-
-
-
 
 // Explicit template instantiation
 template void saveDataToFile<DataMatrix>(const DataMatrix& data, const std::string& filename);

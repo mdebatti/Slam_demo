@@ -109,8 +109,8 @@ void SimulationSetup::generateProcessAndMeasurementNoise()
 
         // Observations still subject to noise
         _beacons_observationsRB_noise[rr].resize(SLAM_ARRAY_SIZE::OBSERVATION_DIM);
-        _beacons_observationsRB_noise[rr][0] = 0.0; //SLAM_NOISE::SIGMA_RANGE * normal_dist(gen);
-        _beacons_observationsRB_noise[rr][1] = 0.0; //SLAM_NOISE::SIGMA_BEARING * normal_dist(gen);
+        _beacons_observationsRB_noise[rr][0] = SLAM_NOISE::SIGMA_RANGE * normal_dist(gen);
+        _beacons_observationsRB_noise[rr][1] = SLAM_NOISE::SIGMA_BEARING * normal_dist(gen);
     }
 
     for (int rr = SLAM_CONST::INIT_STEPS; rr < _num_steps; ++rr)
@@ -124,22 +124,20 @@ void SimulationSetup::generateProcessAndMeasurementNoise()
         // Generate Gaussian noise for wheel angular velocity
         double noise_q = normal_dist(gen); // Gaussian noise for wheel angular velocity
         double noise_w = normal_dist(gen); // Gaussian noise for control inputs
-        _vehicle_controls_noisy[rr][0] = u0;// + SLAM_NOISE::SIGMA_Q * noise_q * u0 + SLAM_NOISE::SIGMA_W * noise_w;
+        _vehicle_controls_noisy[rr][0] = u0 + SLAM_NOISE::SIGMA_Q * noise_q * u0 + SLAM_NOISE::SIGMA_W * noise_w;
 
         // Generate Gaussian noise for steer angle
         double noise_s = normal_dist(gen); // Gaussian noise for steer angle
         double noise_g = normal_dist(gen); // Gaussian noise for control inputs
-        _vehicle_controls_noisy[rr][1] = u1;// + SLAM_NOISE::SIGMA_S * noise_s * u1 + SLAM_NOISE::SIGMA_G * noise_g;
+        _vehicle_controls_noisy[rr][1] = u1 + SLAM_NOISE::SIGMA_S * noise_s * u1 + SLAM_NOISE::SIGMA_G * noise_g;
 
         // Process noise for wheel radius
-        _vehicle_wheel_radius_state_additive_noise[rr] = 0.0; //SLAM_CONST::DT*SLAM_NOISE::SIGMA_R * normal_dist(gen);
+        _vehicle_wheel_radius_state_additive_noise[rr] = SLAM_CONST::DT*SLAM_NOISE::SIGMA_R * normal_dist(gen);
 
         // Measurement noise for the observations
         _beacons_observationsRB_noise[rr].resize(SLAM_ARRAY_SIZE::OBSERVATION_DIM);
-        _beacons_observationsRB_noise[rr][0] = 0.0;//SLAM_NOISE::SIGMA_RANGE * normal_dist(gen);
-        _beacons_observationsRB_noise[rr][1] = 0.0;//SLAM_NOISE::SIGMA_BEARING * normal_dist(gen);
-
-        //std::cout << "U noisy should be:\t" << _vehicle_controls_noisy[rr][0] << " \t" << _vehicle_controls_noisy[rr][1] << std::endl;
+        _beacons_observationsRB_noise[rr][0] = SLAM_NOISE::SIGMA_RANGE * normal_dist(gen);
+        _beacons_observationsRB_noise[rr][1] = SLAM_NOISE::SIGMA_BEARING * normal_dist(gen);
     }
 }
 

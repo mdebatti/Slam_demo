@@ -12,7 +12,6 @@ public:
     bool addState() override;
     bool isMapped(const Kalman::ObservationWithTag& z) override;
 
-
 private:
     std::unique_ptr<KalmanFilterStrategy> _wrapped;
     Logger& _logger;

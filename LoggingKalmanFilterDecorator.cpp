@@ -1,7 +1,5 @@
 #include "LoggingKalmanFilterDecorator.h"
 
-
-
 LoggingKalmanFilterDecorator::LoggingKalmanFilterDecorator(std::unique_ptr<KalmanFilterStrategy> wrapped, Logger& logger)
     : _wrapped(std::move(wrapped)),
       _logger(logger)
@@ -79,7 +77,7 @@ bool LoggingKalmanFilterDecorator::addState()
     {
         if (kf)
         {
-            std::cout << "Time step " << _timeStep << ": Added beacon #" << int(kf->get_z()(2)) << " (" << kf->get_obsWRF()(0) << "m, " << kf->get_obsWRF()(1) << ") to the map" << endl;
+            std::cout << "Time step " << _timeStep << ": Added beacon #" << int(kf->get_z()(2)) << " (" << kf->get_obsWRF()(0) << "m, " << kf->get_obsWRF()(1) << "m) to the map" << endl;
             kf->displayStateCovarianceMatrix();
         }
         else

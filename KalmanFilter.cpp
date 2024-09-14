@@ -24,11 +24,11 @@ KalmanFilter::KalmanFilter(Logger& logger,
     // First check if matrix multiplication operation match Matlab results
     testMatrixOperationsInPredict();
     testMatrixOperationsInUpdate(x_init);
+    testMatrixOperationsInAddState(x_init);
 
     // RESET STATE OF MATRIXES - CHECK IF NEEDED
 
-    // Initialise the state covariance matrix.
-    // It only contains the 4 vehicle states at the begining (i.e: no landmarks)
+    // Initialise the state covariance matrix - It only contains the 4 vehicle states at the begining (i.e: no landmarks)
     _X.diagonal() = diag_X_init;
 
     //Initialise Kalman gain with 0
@@ -43,46 +43,6 @@ KalmanFilter::KalmanFilter(Logger& logger,
      std::cout << "State covariance matrix diagonal values: " << _X.diagonal().transpose() << std::endl;
 }
 
-
-void KalmanFilter::logStateAndCovariance(int k, const std::string& message) const
-{
-    _logger.logMatrix(k, message + " - State (_x)", _x);
-    _logger.logMatrix(k, message + " - Covariance (_X)", _X);
-}
-
-void KalmanFilter::logInnovationAndCovariance(int k, const std::string& message) const
-{
-    // Only log if there has been a feature matched
-    if (_z(2) >=0)
-    {
-        _logger.logMatrix(k, message + " - Innovation (_v)", _v);
-        _logger.logMatrix(k, message + " - Covariance (_S)", _S);
-    }
-}
-
-void KalmanFilter::logStateToInnovationTransferMatrixH(int k,  const std::string& message) const
-{
-    // Only log if there has been a feature matched
-    if (_z(2) >=0)
-    {
-        _logger.logMatrix(k, message + " - Covariance (_H)", _H);
-    }
-}
-
-void KalmanFilter::logControlInput(int k, const Kalman::Input& u) const
-{
-    _logger.logMatrix(k, "Control input into prediction step - input (u)", u);
-}
-
-void KalmanFilter::logObservation(int k, const Kalman::ObservationWithTag& z) const
-{
-    _logger.logMatrix(k, "Observation before update step - (z)", z);
-}
-
-void KalmanFilter::log(int k, const std::string& message) const
-{
-    _logger.log(k, message);
-}
 
 // Function to generate a one-step vehicle prediction from previous estimate and control input.
 void KalmanFilter::predict(const Kalman::Input& u, double wheel_radius_noise)
@@ -195,7 +155,8 @@ void KalmanFilter::update()
     double r  = sqrt(r2);
 
     const double epsilon = 1e-3;
-    if (r < epsilon) {
+    if (r < epsilon)
+    {
         std::cerr << "Warning: r is too small, potential numerical instability." << std::endl;
         r = epsilon;
     }
@@ -273,10 +234,6 @@ void KalmanFilter::updateMatrixOperationsDo()
         _x  = _x + _K * _v;
         _X  = _X - _K * _S * _K.transpose();
     }
-    else
-    {
-        //std::cout << "Innovation gate failed" << endl;
-    }
 }
 
 bool KalmanFilter::addState()
@@ -316,15 +273,26 @@ bool KalmanFilter::addState()
     _R(0,0) = _var_range;
     _R(1,1) = _var_bearing;
 
+    // z is expressed in range and bearing. transform it to a WRF (global X, Y)
+    _obsWRF(0) = _x(0) + dxr + dxo;
+    _obsWRF(1) = _x(1) + dyr + dyo;
+
+    // Augment the mapped andmark list
+    _mappedLandmarkList.push_back( _z(2));
+
+    // Matrix operations
+    addStateMatrixOperationDo();
+
+    return true;
+}
+
+void KalmanFilter::addStateMatrixOperationDo()
+{
     // Calculate mu (cross-covariance of new landmark with existing state), a N x OBSERVATION_DIM matrix
     _mu = Kalman::XVehicleAndStateBlockTallAndSkinny(_X) * _Tx.transpose();
 
     // Calculate Sigma (covariance of new landmark), a OBSERVATION_DIM x OBSERVATION_DIM matrix
     _sigma_new_landmark = _Tx * Kalman::XVehicleBlock(_X) * _Tx.transpose() + _Tz * _R * _Tz.transpose();
-
-    // z is expressed in range and bearing. transform it to a WRF (global X, Y)
-    _obsWRF(0) = _x(0) + dxr + dxo;
-    _obsWRF(1) = _x(1) + dyr + dyo;
 
     // Resize the state vector x and state covariance X
     int newStateStart = _x.rows();
@@ -352,11 +320,68 @@ bool KalmanFilter::addState()
         _K.resize(_x.rows(),SLAM_ARRAY_SIZE::OBSERVATION_DIM);
         _K.setZero();
     }
+}
 
-    // Augment the mapped andmark list
-    _mappedLandmarkList.push_back( _z(2));
+bool KalmanFilter::isMapped(const Kalman::ObservationWithTag& obsRB)
+{
+    // important, _z must be set here! Otherwise modify update() and addState() functions
+    _z = obsRB;
 
-    return true;
+    // And this is just for consistent logging
+    _zpred.setZero();
+
+    int numMapped = _mappedLandmarkList.size();
+    bool result = false;
+
+    for(int i = 0; i < numMapped; ++i)
+    {
+        if(isEqualWithTolerance(_mappedLandmarkList[i], obsRB(2)))
+        {
+            //std::cout << "Matched an observation with beacon #" << int(obsRB(2)) << " to the map" << endl;
+            result = true;
+        }
+    }
+    return result;
+}
+
+void KalmanFilter::logStateAndCovariance(int k, const std::string& message) const
+{
+    _logger.logMatrix(k, message + " - State (_x)", _x);
+    _logger.logMatrix(k, message + " - Covariance (_X)", _X);
+}
+
+void KalmanFilter::logInnovationAndCovariance(int k, const std::string& message) const
+{
+    // Only log if there has been a feature matched
+    if (_z(2) >=0)
+    {
+        _logger.logMatrix(k, message + " - Innovation (_v)", _v);
+        _logger.logMatrix(k, message + " - Covariance (_S)", _S);
+    }
+}
+
+void KalmanFilter::logStateToInnovationTransferMatrixH(int k,  const std::string& message) const
+{
+    // Only log if there has been a feature matched
+    if (_z(2) >=0)
+    {
+        _logger.logMatrix(k, message + " - Covariance (_H)", _H);
+    }
+}
+
+void KalmanFilter::logControlInput(int k, const Kalman::Input& u) const
+{
+    _logger.logMatrix(k, "Control input into prediction step - input (u)", u);
+}
+
+void KalmanFilter::logObservation(int k, const Kalman::ObservationWithTag& z) const
+{
+    _logger.logMatrix(k, "Observation before update step - (z)", z);
+}
+
+void KalmanFilter::log(int k, const std::string& message) const
+{
+    _logger.log(k, message);
 }
 
 void KalmanFilter::displayStateCovarianceMatrix(const std::optional<std::string>& message, std::optional<int> k) const
@@ -425,26 +450,10 @@ void KalmanFilter::displaylandmarkStateToInnovationTransferMatrix() const
     std::cout << std::endl;
 }
 
-bool KalmanFilter::isMapped(const Kalman::ObservationWithTag& obsRB)
+void KalmanFilter::set_z(const Kalman::ObservationWithTag& z)
 {
-    // important, _z must be set here! Otherwise modify update() and addState() functions
-    _z = obsRB;
-
-    // And this is just for consistent logging
-    _zpred.setZero();
-
-    int numMapped = _mappedLandmarkList.size();
-    bool result = false;
-
-    for(int i = 0; i < numMapped; ++i)
-    {
-        if(isEqualWithTolerance(_mappedLandmarkList[i], obsRB(2)))
-        {
-            //std::cout << "Matched an observation with beacon #" << int(obsRB(2)) << " to the map" << endl;
-            result = true;
-        }
-    }
-    return result;
+    _H.resize(SLAM_ARRAY_SIZE::OBSERVATION_DIM, _x.rows());
+    _z = z;
 }
 
 DataVector KalmanFilter::eigenToStdVector(const Eigen::VectorXd& eigenVec) const
@@ -665,3 +674,54 @@ void KalmanFilter::testMatrixOperationsInUpdate(const Kalman::State& x_init)
     _v.setZero();
 }
 
+
+void KalmanFilter::testMatrixOperationsInAddState(const Kalman::State& x_init)
+{
+     // These are testing inputs given to the Matlab script
+    _X.resize(6,6);
+    _X <<   0.54986, 0.40181, 0.41727, 0.33772, 0.24169, 0.57521,
+            0.14495, 0.075967, 0.049654, 0.90005, 0.40391, 0.05978,
+            0.85303, 0.23992, 0.90272, 0.36925, 0.096455, 0.23478,
+            0.62206, 0.12332, 0.94479, 0.1112, 0.13197, 0.35316,
+            0.35095, 0.18391, 0.49086, 0.78025, 0.94205, 0.82119,
+            0.51325, 0.23995, 0.48925, 0.38974, 0.95613, 0.015403;
+
+    // This is needed as length of that vector used in addStateMatrixOperationDo
+    _x.resize(6,1);
+
+    _R << 0.64912, 0,
+         0, 0.73172;
+
+    _Tx << 1, 0, 0.43141, 0,
+          0, 1, 0.91065, 0;
+
+    _Tz << 0.14554, 0.86929,
+          0.13607, 0.5797;
+
+
+    // Initialize expected output matrix (8x8)
+    Kalman::StateCovariance new_expected(8, 8);
+    new_expected << 0.54986, 0.40181, 0.41727, 0.33772, 0.24169, 0.57521, 0.7298744507, 0.7817969254999999,
+                    0.14495, 0.075967, 0.049654, 0.90005, 0.40391, 0.05978, 0.16637123214, 0.1211844151,
+                    0.85303, 0.23992, 0.90272, 0.36925, 0.096455, 0.23478, 1.2424724352, 1.061981968,
+                    0.62206, 0.12332, 0.94479, 0.1112, 0.13197, 0.35316, 1.0296518539, 0.9836930134999999,
+                    0.35095, 0.18391, 0.49086, 0.78025, 0.94205, 0.82119, 0.5627119126, 0.630911659,
+                    0.51325, 0.23995, 0.48925, 0.38974, 0.95613, 0.015403, 0.7243173425, 0.6854855125,
+                    0.7298744507, 0.16637123214, 1.2424724352, 1.0296518539, 0.5627119126, 0.7243173425, 1.832574343417076, 1.621535263832776,
+                    0.7817969254999999, 0.1211844151, 1.061981968, 0.9836930134999999, 0.630911659, 0.6854855125, 1.679417452772776, 1.346192815499488;
+
+    // Calculate Matrix operations
+    addStateMatrixOperationDo();
+
+    // Compare Eigen calcs with Matlab expected outputs. This will throw an error if failure and display the matrix
+    testEigenMaxtrixEquality(_X, new_expected,"_X", "addState()");
+
+    // reset state of matrix
+    _X.resize(SLAM_ARRAY_SIZE::VEHICLE_STATE_DIM,SLAM_ARRAY_SIZE::VEHICLE_STATE_DIM);
+    _x.resize(SLAM_ARRAY_SIZE::VEHICLE_STATE_DIM);
+    _x = x_init;
+    _X.setZero();
+    _R.setZero();
+    _Tx.setZero();
+    _Tz.setZero();
+}
