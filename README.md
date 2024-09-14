@@ -1,8 +1,11 @@
-# Kalman Filter Vehicle Tracking
+# Extended Kalman Filter SLAM Implementation in C++
 
-This repository contains a C++ implementation of a Kalman Filter applied to a vehicle tracking system. The project simulates a vehicle's movement along a predefined path, generates noisy sensor observations, and uses the Kalman Filter algorithm to estimate the vehicle's true position and orientation.
+## Overview
 
-[![Alt Text](https://github.com/mdebatti/Slam_demo/blob/main/video/EKF_SLAM.gif)](https://github.com/mdebatti/Slam_demo/blob/main/video/EKF_SLAM.mp4)
+
+This repository contains an implementation of the Extended Kalman Filter (EKF) for Simultaneous Localization and Mapping (SLAM) using modern C++. The project simulates a vehicle's movement along a predefined path, generates noisy sensor observations, and uses the Kalman Filter algorithm to estimate the vehicle's true position and orientation. Navigational features are incorporated into the system state when they are first observed.
+
+![Extended Kalman Filter SLAM Implementation in C++](https://github.com/mdebatti/Slam_demo/blob/main/video/EKF_SLAM.gif)
 
 - Red dot: vehicle
 - blue path:            vehicle trajectory
@@ -10,15 +13,19 @@ This repository contains a C++ implementation of a Kalman Filter applied to a ve
 - Green circles:        landmarks
 - Green dashed circles: observation range (landmark visible to vehicle radar)
 
-note how the estimated path moves away from the true path when landmarks are not observable, and how the estimated path snaps back to the true trajectory as soon as a previously observed feature is re-observed.
+Notice how the estimated path deviates from the true path when landmarks are not observable due to the influence of process noise on the prediction model. However, as soon as a previously observed landmark is detected again, the estimated path quickly realigns with the true trajectory.
 
-The C++ implementation in this repository compiles and run. The predict(), update(), addState() member functions are in agreement with the output of the original matlab implementation shown on the animation. There is however a bug that causes the covariance matrixes and the estimate to diverge in the C++ code.
+The figure below illustrates the innovations (differences between the observed and predicted measurements) for both "range" and "bearing" observations in the Extended Kalman Filter SLAM implementation. The innovations are plotted along with the 2-sigma (95% confidence) bounds derived from the innovation covariance matrix. Throughout the simulation, the majority of innovation values consistently fall within the 2-sigma bounds, confirming that the filter's predictions are well-calibrated and that the measurement noise is accurately modeled.
+
+![Innovation in C++](https://github.com/mdebatti/Slam_demo/blob/main/figures/innovation_C++.png)
 
 ## Features
-
+- **Extended Kalman Filter Implementation**: EKF for SLAM applications.
 - **Control Input Generation**: Calculate ideal control inputs (e.g., steering, velocity) based on a target path to predict the vehicle's true state.
-- **Observation Simulation**: Generate simulated sensor data with added noise to mimic real-world sensor imperfections.
-- **Kalman Filter Implementation**: Iteratively apply the Kalman Filter algorithm to predict the vehicle's state, incorporate noisy observations, and refine the state estimate.
+- **Observation Simulation**: Generate simulated radar observations with added noise to mimic real-world sensor imperfections.
+- **Efficient Matrix Operations**: Utilizes the Eigen library for high-performance linear algebra computations.
+- **Modern C++ Design Patterns:** Employs the Strategy and Decorator patterns for flexibility and modularity.
+- **Self-testing Kalman Filter:** The Kalman Filter object performs self-tests on its matrix operations upon construction to ensure correctness.
 
 ## How It Works
 
@@ -32,18 +39,32 @@ Simulated sensor readings are generated based on the vehicle's true position and
 
 ### 3. Kalman Filter Process
 
-The Kalman Filter operates in a cycle of three main steps:
+The Kalman Filter operates in a cycle of two main steps:
 
 - **Prediction**: 
   - Predict the next state of the vehicle using the current state estimate and control input.
   - Apply matrix operations to update the state estimate and covariance matrix.
 
-- **Measurement Update**:
+- **Measurement Update & Map Expansion (if applicable)**:
   - Use the noisy observations to refine the state estimate.
   - Calculate the Kalman Gain to optimally combine the prediction and observation.
-
-- **Map Expansion** (if applicable):
   - Expand the state vector and covariance matrix if new features or landmarks are detected.
+ 
+
+  ```cpp
+  Kalman::ObservationWithTag z = sim_data.getNoisyObservationWithTag(k);
+
+  if(loggingKalmanFilter->isMapped(z))
+  {
+      loggingKalmanFilter->update();
+  }
+  else
+  {
+      loggingKalmanFilter->addState();
+  }
+  ```
+
+**Self-testing Matrix Operations**: Upon construction, the Kalman Filter object performs self-tests on its matrix operations to ensure all mathematical computations are correctly implemented.
 
 ### 4. Noise Modeling
 
@@ -51,6 +72,15 @@ The Kalman Filter operates in a cycle of three main steps:
 - **Measurement Noise**: Reflects sensor inaccuracies, added to the simulated observations.
 
 ## Detailed Matrix Operations
+
+### Matrix Operations
+
+Matrix computations are central to the EKF algorithm. This project leverages the [Eigen](https://eigen.tuxfamily.org/) library for efficient and reliable linear algebra operations, including:
+
+- Matrix multiplication and inversion
+- Calculation of Jacobians for linearization
+- Covariance updates
+- State estimation updates
 
 ### 1. State Prediction
 
@@ -102,9 +132,9 @@ Where `I` is the identity matrix.
 
 ### Prerequisites
 
-- A C++ compiler supporting C++11 or later.
+- A C++ compiler supporting C++17 or later.
 - CMake for building the project.
-- Eigen for the matrix operations
+- Eigen for the matrix operations (included in this repository)
 
 ### Building the Project
 
@@ -115,33 +145,60 @@ Where `I` is the identity matrix.
     cd Slam_demo
     ```
 
-2. Build the project using CMake:
-
-    ```bash
-    mkdir build
-    cd build
-    cmake ..
-    make
-    ```
+2. Build the project:
 
 3. Run the executable:
 
-    ```bash
-    ./KalmanFilter
-    ```
 
-### File Descriptions
+## Repository Structure
 
-- **main.cpp**: Entry point of the application; sets up the simulation and runs the Kalman Filter.
-- **KalmanFilter.cpp**: Implements the Kalman Filter algorithm.
-- **KalmanFilter.h**: Header file containing the Kalman Filter class definition.
-- **SimulationSetup.cpp**: Contains setup and configuration for the simulation environment, including initializing the target path and generating control inputs.
-- **SimulationSetup.h**: Header file for the simulation setup module.
-- **types.h**: Defines types and constants used throughout the simulation.
+- `thirdparty/`: Eigen library
+- `docs/`: references
+- `video/`: animation illustrating a vehicle tracking application
+- `figures/`: plots showing agreement with Matlab code
+- `inputs/`: location of landmarks and vehicle reference path in txt files, and Matlab results
+- `data/`: Input data files for simulation
+- `outputs/`: folder created upon execution. logs as .txt file. Some can me directly loaded into matlab as variables.
+- `CMakeLists.txt`: Build configuration
 
-## Contributing
+## Dependencies
 
-Contributions are welcome! Please submit a pull request or open an issue to discuss your ideas.
+- **Eigen Library**: Used for all matrix and linear algebra operations. [Eigen Website](https://eigen.tuxfamily.org/)
+- **Standard C++ Libraries**
+
+## Project Structure
+
+The project is organized into several key files and directories that encapsulate different aspects of the Extended Kalman Filter SLAM implementation. Below is a breakdown of the major components:
+
+### Header Files
+
+- **`constants.h`**: Contains physical constants, noise parameters, and configuration settings for the SLAM simulation.
+- **`FileIO.h`**: Defines the `FileIO` class for handling file input/output operations, particularly reading simulation data and saving results.
+- **`functions.h`**: Includes utility functions used throughout the project, such as angle normalization and file name generation.
+- **`KalmanFilter.h`**: The core implementation of the Kalman Filter, including prediction, update, and state management functions.
+- **`KalmanFilterStrategy.h`**: Defines an abstract base class (`KalmanFilterStrategy`) for implementing different Kalman Filter strategies, facilitating the use of the Strategy design pattern.
+- **`Logger.h`**: Declares the `Logger` class responsible for logging simulation data and Kalman Filter states for later analysis.
+- **`LoggingKalmanFilterDecorator.h`**: Implements the Decorator design pattern, allowing the addition of logging functionality to the Kalman Filter without altering its core behavior.
+- **`SimulationSetup.h`**: Contains the `SimulationSetup` class, which initializes the simulation environment, including vehicle state and sensor noise.
+- **`types.h`**: Defines various type aliases and data structures used throughout the project, such as matrices and vectors for linear algebra operations.
+
+### Source Files
+
+- **`FileIO.cpp`**: Implements the `FileIO` class methods for reading simulation input data and writing output data to files.
+- **`functions.cpp`**: Implements various utility functions declared in `functions.h`.
+- **`KalmanFilter.cpp`**: Contains the implementation of the Kalman Filter, including matrix operations for the prediction and update steps.
+- **`KalmanFilterStrategy.cpp`**: The source file corresponding to the `KalmanFilterStrategy` class, providing an interface for different Kalman Filter implementations.
+- **`Logger.cpp`**: Implements the `Logger` class, which logs the Kalman Filter’s internal state and simulation results.
+- **`LoggingKalmanFilterDecorator.cpp`**: Implements the methods of the `LoggingKalmanFilterDecorator` class, adding logging capabilities to the Kalman Filter.
+- **`main.cpp`**: The entry point of the application, where the simulation is set up, the Kalman Filter is instantiated, and the main loop is executed.
+- **`SimulationSetup.cpp`**: Implements the `SimulationSetup` class, which initializes and manages the simulation environment, including control inputs and sensor observations.
+
+### CMake Configuration
+
+- **`CMakeLists.txt`**: The CMake configuration file for building the project, specifying the source files, include directories, and necessary libraries.
+
+## Acknowledgments
+Thank you to Prof. Hugh F. Durrant-Whyte and Prof. Stefan B. Williams for their support and for allowing me to complete my master’s thesis at the Australian Centre for Field Robotics at the University of Sydney. This work draws on many ideas developed at the center, and their guidance was invaluable.
 
 ## Reference:
 
